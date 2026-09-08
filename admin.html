@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>관리 · 도구리 작업실</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#090a11">
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@700;800&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/assets/css/site.css">
+<style>
+/* 관리 화면 — 사이트 토큰을 쓰되 효과 없이 담백하게 */
+body{background-image:radial-gradient(ellipse 60% 40% at 90% 0%, rgba(128,112,200,.12), transparent 60%)}
+.a-wrap{max-width:980px;margin:0 auto;padding:28px clamp(16px,4vw,40px) 80px}
+.a-top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-bottom:18px;border-bottom:1px solid var(--line);margin-bottom:26px}
+.a-top .brand{font-size:16px}
+.a-top .brand small{font:500 10px/1 var(--mono);letter-spacing:.3em;color:var(--paper-3);margin-left:12px}
+.a-top a.home{font:500 13px/1 var(--label);color:var(--paper-2);text-decoration:none}
+.a-top a.home:hover{color:var(--gold-2)}
+.panel{background:linear-gradient(170deg,var(--board-2),var(--board));border:1px solid var(--line);border-radius:6px;padding:22px clamp(16px,3vw,26px);margin-bottom:18px}
+.panel h2{font:700 17px/1.3 var(--serif);color:var(--paper-strong);display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.panel h2 .step{font:500 10px/1 var(--mono);letter-spacing:.3em;color:var(--gold);border:1px solid rgba(217,177,92,.4);padding:5px 8px;border-radius:3px}
+.panel .desc{font:400 13px/1.7 var(--label);color:var(--paper-2);margin-bottom:16px;max-width:64ch}
+.panel .desc a{color:var(--gold);text-decoration:none;border-bottom:1px solid rgba(217,177,92,.4)}
+.panel[hidden]{display:none}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px 14px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field.wide{grid-column:1/-1}
+.field label{font:500 11px/1.4 var(--label);letter-spacing:.06em;color:var(--paper-3)}
+.field input,.field select,.field textarea{font:400 14px/1.5 var(--label);color:var(--paper);background:rgba(9,10,17,.6);border:1px solid var(--line);border-radius:4px;padding:10px 12px;outline:none;transition:border-color .2s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold)}
+.field input[type=password]{font-family:var(--mono);letter-spacing:.1em}
+.field textarea{min-height:64px;resize:vertical}
+.field .hint{font:400 11.5px/1.5 var(--label);color:var(--paper-3)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px}
+.status{font:400 12.5px/1.6 var(--label);color:var(--paper-2)}
+.status.ok{color:#9fd7a6}.status.err{color:var(--wax-2)}
+.status b{color:var(--paper-strong);font-weight:600}
+/* 작품 목록 */
+.wlist{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.witem{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:14px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:4px;background:rgba(9,10,17,.35)}
+.witem .cv{width:64px;aspect-ratio:1;border-radius:3px;overflow:hidden;background:#0c0e14}
+.witem .cv img{width:100%;height:100%;object-fit:cover;display:block}
+.witem .ti{min-width:0}
+.witem .ti b{display:block;font:700 15px/1.3 var(--serif);color:var(--paper-strong);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.witem .ti span{font:400 12px/1.5 var(--label);color:var(--paper-3)}
+.witem .ops{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.ib{font:500 12px/1 var(--label);color:var(--paper-2);border:1px solid var(--line);border-radius:4px;padding:8px 10px;transition:border-color .2s,color .2s;background:transparent}
+.ib:hover{border-color:var(--gold);color:var(--gold-2)}
+.ib.danger:hover{border-color:var(--wax-2);color:var(--wax-2)}
+.ib[disabled]{opacity:.3;pointer-events:none}
+.empty{font:400 13px/1.6 var(--label);color:var(--paper-3);padding:14px 0}
+/* 카드 업로드 */
+.drop{display:block;margin-top:14px;border:1px dashed rgba(217,177,92,.45);border-radius:6px;padding:26px 16px;text-align:center;cursor:pointer;transition:background .2s,border-color .2s;background:rgba(217,177,92,.03)}
+.drop:hover,.drop.over{background:rgba(217,177,92,.08);border-color:var(--gold)}
+.drop b{display:block;font:700 15px/1.4 var(--serif);color:var(--paper-strong)}
+.drop span{display:block;font:400 12px/1.6 var(--label);color:var(--paper-3);margin-top:4px}
+.drop input{display:none}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;margin-top:16px}
+.cd{position:relative;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:#0c0e14;cursor:grab;transition:transform .2s,border-color .2s}
+.cd.drag{opacity:.4}
+.cd.over{border-color:var(--gold);transform:scale(1.03)}
+.cd img{width:100%;aspect-ratio:1;object-fit:cover;display:block;pointer-events:none}
+.cd .n{position:absolute;left:6px;top:6px;font:500 11px/1 var(--mono);color:#14120f;background:var(--gold);padding:4px 7px;border-radius:3px}
+.cd .n.cover::after{content:" 표지"}
+.cd .ops{display:flex;border-top:1px solid var(--line)}
+.cd .ops button{flex:1;font:500 12px/1 var(--label);color:var(--paper-2);padding:8px 0;border-right:1px solid var(--line)}
+.cd .ops button:last-child{border-right:0}
+.cd .ops button:hover{color:var(--gold-2);background:rgba(217,177,92,.08)}
+.cd .ops button.x:hover{color:var(--wax-2)}
+/* 진행 */
+.log{margin-top:14px;font:400 12.5px/1.8 var(--mono);color:var(--paper-2);background:rgba(9,10,17,.6);border:1px solid var(--line);border-radius:4px;padding:12px 14px;max-height:220px;overflow:auto;white-space:pre-wrap}
+.log:empty{display:none}
+.bar{height:4px;background:rgba(230,226,218,.1);border-radius:2px;overflow:hidden;margin-top:12px}
+.bar i{display:block;height:100%;width:0;background:var(--gold);transition:width .3s}
+.done{margin-top:14px;padding:14px 16px;border:1px solid rgba(159,215,166,.4);border-radius:4px;background:rgba(159,215,166,.06);font:400 13.5px/1.7 var(--label);color:var(--paper)}
+.done a{color:var(--gold);text-decoration:none;border-bottom:1px solid rgba(217,177,92,.4)}
+.lock-note{font:400 12px/1.6 var(--label);color:var(--paper-3);margin-top:10px}
+@media (max-width:560px){.witem{grid-template-columns:52px minmax(0,1fr)}.witem .ops{grid-column:1/-1;justify-content:flex-start}}
+</style>
+</head>
+<body>
+<div class="a-wrap">
+  <div class="a-top"><a class="brand" href="/"><i></i>도구리 작업실<small>ADMIN</small></a><a class="home" href="/">← 사이트로</a></div>
+
+  <section class="panel" id="pConnect">
+    <h2><span class="step">01</span>저장소 연결</h2>
+    <p class="desc">이 화면은 서버 없이 GitHub 저장소에 직접 파일을 넣습니다. 처음 한 번 <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub 토큰</a>을 만들어 붙여 넣으면 이 브라우저에만 저장돼요. 만들 때 <b>Repository access → Only select repositories → 사이트 저장소</b>, <b>Permissions → Contents → Read and write</b>만 켜면 됩니다.</p>
+    <div class="fields">
+      <div class="field"><label>GitHub 아이디</label><input id="owner" value="doguri25" autocomplete="off"></div>
+      <div class="field"><label>사이트 저장소 이름</label><input id="repo" value="doguri-studio" autocomplete="off"><span class="hint">vercel에 연결한 저장소. 이름이 다르면 고쳐 주세요.</span></div>
+      <div class="field"><label>브랜치</label><input id="branch" value="main" autocomplete="off"></div>
+      <div class="field wide"><label>토큰 (github_pat_… 또는 ghp_…)</label><input id="token" type="password" autocomplete="off" placeholder="github_pat_…"></div>
+    </div>
+    <div class="row"><button type="button" class="btn gold" id="btnConnect">연결</button><button type="button" class="btn line" id="btnForget">이 브라우저에서 토큰 지우기</button><span class="status" id="stConnect"></span></div>
+  </section>
+
+  <section class="panel" id="pWorks" hidden>
+    <h2><span class="step">02</span>올라가 있는 작품집</h2>
+    <p class="desc">순서를 바꾸거나 지운 뒤 <b>변경 사항 게시</b>를 누르면 반영됩니다. 표지는 언제나 첫 장입니다.</p>
+    <div class="fields"><div class="field"><label>어느 앱의 작품집인가요</label><select id="appSel"></select></div></div>
+    <div class="wlist" id="wlist"></div>
+    <div class="row"><button type="button" class="btn gold" id="btnSaveWorks" disabled>변경 사항 게시</button><span class="status" id="stWorks"></span></div>
+  </section>
+
+  <section class="panel" id="pNew" hidden>
+    <h2><span class="step">03</span>새 작품 올리기</h2>
+    <p class="desc">카드 이미지를 넣고 순서를 맞춘 뒤 게시하면, 사진은 자동으로 줄여서(긴 변 1080px) 저장소에 올라가고 약 1분 뒤 사이트에 나타납니다.</p>
+    <div class="fields">
+      <div class="field"><label>제목</label><input id="wTitle" placeholder="예) 젖지 않은 우산"></div>
+      <div class="field"><label>날짜</label><input id="wDate" placeholder="2026.09"></div>
+      <div class="field"><label>카드 비율</label><select id="wRatio"><option value="1:1">1:1 (정사각)</option><option value="4:5">4:5 (인스타 세로)</option><option value="3:4">3:4</option><option value="9:16">9:16 (스토리)</option></select></div>
+      <div class="field"><label>폴더 이름 (영문·숫자·하이픈)</label><input id="wSlug" placeholder="자동"><span class="hint">주소와 폴더에 쓰입니다. 비우면 자동으로 정해요.</span></div>
+      <div class="field wide"><label>한 줄 소개 (선택)</label><input id="wBlurb" placeholder="예) 비 오는 밤, 우산꽂이에 우산이 하나 남았다."></div>
+    </div>
+    <label class="drop" id="drop"><b>카드 이미지 넣기</b><span>여기로 끌어다 놓거나 눌러서 고르기 · 여러 장 한 번에 · 파일 이름 순으로 정렬됩니다</span><input type="file" id="files" accept="image/*" multiple></label>
+    <div class="cards" id="cards"></div>
+    <div class="row"><button type="button" class="btn gold" id="btnPublish" disabled>게시하기</button><button type="button" class="btn line" id="btnClear">비우기</button><span class="status" id="stNew"></span></div>
+    <div class="bar" id="bar" hidden><i></i></div>
+    <div class="log" id="log"></div>
+    <div class="done" id="done" hidden></div>
+  </section>
+</div>
+<script src="/assets/js/admin.js" defer></script>
+</body>
+</html>

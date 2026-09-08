@@ -4,7 +4,7 @@
     "tagline": "이야기와 장난감 사이.",
     "url": "https://doguri-studio.vercel.app",
     "feedbackForm": "https://docs.google.com/forms/d/e/1FAIpQLSfGYkPIjYMp6pggbwKcP7cJZf7tYMD-eHa9MRflpc_0iFph7g/viewform",
-    "feedbackField": ""
+    "feedbackField": "entry.1967894374"
   },
   "apps": [
     {
@@ -105,20 +105,10 @@
         "/media/nooneleft/04.webp"
       ],
       "video": null,
-      "run": {
-        "type": "hosted",
-        "url": "/apps/nooneleft/"
-      },
+      "run": null,
       "altRun": null,
-      "downloads": [
-        {
-          "label": "HTML (브라우저에서 열기)",
-          "file": "/apps/nooneleft/index.html",
-          "filename": "나간사람이없다.html",
-          "size": "0.9 MB"
-        }
-      ],
-      "notice": "저장은 브라우저 안에만 남습니다. 폰에서는 세로 화면으로 자동 전환돼요. 윈도우 실행기(zip)는 준비 중입니다.",
+      "downloads": [],
+      "notice": "이 게임은 아직 비공개입니다. 화면과 만든 이야기만 먼저 보여 드려요.",
       "facts": [
         [
           "러닝타임",
@@ -137,7 +127,8 @@
           "클릭과 선택만"
         ]
       ],
-      "story": "/content/nooneleft.md"
+      "story": "/content/nooneleft.md",
+      "private": true
     },
     {
       "slug": "morning-desk",

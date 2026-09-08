@@ -79,6 +79,20 @@ doguri-studio/
 
 `ratio`는 카드 비율(`1:1` · `4:5` · `3:4` · `9:16`), `blurb`는 한 줄 소개(없어도 됨). 작품이 여러 개면 배열에 계속 추가. 지금 들어 있는 「젖지 않은 우산」은 앱의 예시 원고로 만든 샘플이니 본인 작품으로 바꿔도 된다.
 
+
+## 관리 화면 (/admin) — 카드소설을 브라우저에서 바로 올리기
+
+`https://doguri-studio.vercel.app/admin` 을 열면 서버 없이 GitHub 저장소에 직접 커밋하는 관리 화면이 나온다. 사진을 넣고 순서를 맞춘 뒤 **게시하기**를 누르면 이미지가 자동으로 줄어(긴 변 1080px, webp) 저장소에 올라가고, Vercel이 다시 배포해 약 1분 뒤 사이트에 나타난다. 올라간 작품의 순서 바꾸기·제목 고치기·지우기도 여기서 한다.
+
+처음 한 번 GitHub 토큰이 필요하다.
+
+1. GitHub → 오른쪽 위 프로필 → Settings → 맨 아래 **Developer settings** → **Personal access tokens → Fine-grained tokens → Generate new token**
+2. Token name 아무거나, Expiration은 1년 등 넉넉히, **Repository access → Only select repositories → 사이트 저장소(doguri-studio)** 선택
+3. **Permissions → Repository permissions → Contents → Read and write** (다른 건 그대로) → Generate token → 복사
+4. 관리 화면의 토큰 칸에 붙여 넣고 **연결**. 토큰은 이 브라우저(localStorage)에만 저장되고 어디로도 전송되지 않는다(GitHub API 호출에만 쓰임). 다른 기기에서 쓰려면 거기서 다시 붙여 넣으면 된다.
+
+토큰이 유출되면 그 저장소 파일을 고칠 수 있으니, 공용 컴퓨터에서는 쓰고 나서 **이 브라우저에서 토큰 지우기**를 누른다. `/admin` 주소 자체는 공개돼 있어도 토큰이 없으면 아무것도 할 수 없다.
+
 ## 로컬에서 보기
 
 `index.html`을 파일로 직접 열면(`file://`) JSON·마크다운을 읽지 못한다. 저장소 폴더에서:

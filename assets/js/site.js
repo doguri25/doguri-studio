@@ -56,13 +56,13 @@ const grid=$('#grid'), chipsEl=$('#chips'); let tag='all';
 const rots=[-1.6,1.1,-0.8,1.4,-1.2,0.9];
 function renderCards(){
   grid.innerHTML=APPS.map((a,i)=>`
-  <article class="file ${a.status==='soon'?'soon':''}" data-slug="${esc(a.slug)}" data-tags="${esc(a.tags.join('|'))}" style="--rot:${rots[i%rots.length]}deg;--vt:file-${esc(a.slug)}" tabindex="0" role="button" aria-label="${esc(a.name)} 열어 보기"><div class="inner">
+  <article class="file ${a.status==='soon'?'soon':''}" data-slug="${esc(a.slug)}" data-tags="${esc(a.tags.join('|'))}" data-private="${a.private?1:0}" style="--rot:${rots[i%rots.length]}deg;--vt:file-${esc(a.slug)}" tabindex="0" role="button" aria-label="${esc(a.name)} 열어 보기"><div class="inner">
     <i class="seal" aria-hidden="true">D</i>
-    <span class="tab">${a.status==='soon'?'UNWRITTEN':'SEALED · '+esc(a.num)}</span>
+    <span class="tab">${a.status==='soon'?'UNWRITTEN':(a.private?'PRIVATE · ':'SEALED · ')+esc(a.num)}</span>
     <div class="photo"><i class="tape l"></i><i class="tape r"></i>${visHTML(a)}<div class="lens" aria-hidden="true">${visHTML(a)}</div></div>
     <div class="meta"><h3><span class="num">${esc(a.num)}</span>${esc(a.name)}</h3><p>${esc(a.summary)}</p><div class="tags">${a.tags.map(t=>`<span>${esc(t)}</span>`).join('')}</div></div>
-    <div class="acts"><button type="button" class="btn gold run" ${a.run?'':'disabled'}>실행</button><button type="button" class="btn line dl" ${a.downloads&&a.downloads.length?'':'disabled'}>다운로드</button></div>
-    <span class="stamp" aria-hidden="true">${a.status==='soon'?'아직 봉인 중':'봉인을 뜯어 보세요'}</span>
+    <div class="acts"><button type="button" class="btn gold run" ${a.run||a.private?'':'disabled'}>실행</button><button type="button" class="btn line dl" ${(a.downloads&&a.downloads.length)||a.private?'':'disabled'}>다운로드</button></div>
+    <span class="stamp" aria-hidden="true">${a.status==='soon'?'아직 봉인 중':a.private?'비공개 · 열람만':'봉인을 뜯어 보세요'}</span>
   </div></article>`).join('');
   $$('.file',grid).forEach(bindCard);
 }
@@ -72,7 +72,7 @@ function renderChips(){
   chipsEl.innerHTML=[`<button type="button" class="chip on" data-tag="all" role="tab">전체<span class="n">${APPS.length}</span></button>`,...all.map(t=>`<button type="button" class="chip" data-tag="${esc(t)}" role="tab">${esc(t)}<span class="n">${cnt(t)}</span></button>`)].join('');
   $$('.chip',chipsEl).forEach(c=>c.addEventListener('click',()=>setFilter(c.dataset.tag)));
 }
-function updateCount(){ const vis=$$('.file',grid).filter(c=>!c.hidden); const live=vis.filter(c=>!c.classList.contains('soon')).length; $('#count').innerHTML=`서가의 봉인 <b>${vis.length}</b>통 · 열 수 있는 이야기 <b>${live}</b>편 · 쓰는 중 <b>${vis.length-live}</b>편`; }
+function updateCount(){ const vis=$$('.file',grid).filter(c=>!c.hidden); const soon=vis.filter(c=>c.classList.contains('soon')).length; const priv=vis.filter(c=>c.dataset.private==='1'&&!c.classList.contains('soon')).length; const live=vis.length-soon-priv; $('#count').innerHTML=`서가의 봉인 <b>${vis.length}</b>통 · 열 수 있는 이야기 <b>${live}</b>편${priv?` · 비공개 <b>${priv}</b>편`:''} · 쓰는 중 <b>${soon}</b>편`; }
 function setFilter(t,silent){
   if(!$$('.chip',chipsEl).some(c=>c.dataset.tag===t)) t='all';
   tag=t; $$('.chip',chipsEl).forEach(c=>c.classList.toggle('on',c.dataset.tag===t));
@@ -115,13 +115,14 @@ function bindCard(card){
     photo.addEventListener('pointermove',e=>{ const r=photo.getBoundingClientRect(); const lx=e.clientX-r.left, ly=e.clientY-r.top; const Z=2.1; photo.style.setProperty('--lx',lx+'px'); photo.style.setProperty('--ly',ly+'px');
       lensVis.style.width=r.width+'px'; lensVis.style.height=r.height+'px'; lensVis.style.transform=`translate(${55-lx*Z}px,${55-ly*Z}px) scale(${Z})`; });
   }
-  $('.run',card).addEventListener('click',e=>{ e.stopPropagation(); ripple(e); runApp(app,e); });
-  $('.dl',card).addEventListener('click',e=>{ e.stopPropagation(); ripple(e); downloadApp(app,e); });
+  $('.run',card).addEventListener('click',e=>{ e.stopPropagation(); ripple(e); app.private?privateNotice(e):runApp(app,e); });
+  $('.dl',card).addEventListener('click',e=>{ e.stopPropagation(); ripple(e); app.private?privateNotice(e):downloadApp(app,e); });
   card.addEventListener('click',()=>{ if(!card.classList.contains('soon')) openCase(app.slug,card); else toast('아직 봉인이 마르지 않았습니다.'); });
   card.addEventListener('keydown',e=>{ if((e.key==='Enter'||e.key===' ')&&!card.classList.contains('soon')){e.preventDefault();openCase(app.slug,card);} });
 }
 function ripple(e){ const b=e.currentTarget; const r=b.getBoundingClientRect(); const s=document.createElement('span'); s.className='ripple'; const d=Math.max(r.width,r.height); s.style.cssText=`width:${d}px;height:${d}px;left:${e.clientX-r.left-d/2}px;top:${e.clientY-r.top-d/2}px`; b.appendChild(s); setTimeout(()=>s.remove(),650); }
 function slam(text,x,y){ if(reduced)return; const s=document.createElement('span'); s.className='slam'; s.textContent=text; s.style.left=x+'px'; s.style.top=y+'px'; document.body.appendChild(s); setTimeout(()=>s.remove(),1000); }
+function privateNotice(e){ const r=e.currentTarget.getBoundingClientRect(); slam('PRIVATE',r.left+r.width/2,r.top-10); toast('비공개입니다 — 아직 서가 밖으로 나가지 않은 이야기예요.'); }
 function runApp(app,e){ if(!app||!app.run)return; const r=e.currentTarget.getBoundingClientRect(); slam('OPEN',r.left+r.width/2,r.top-10); setTimeout(()=>window.open(app.run.url,'_blank','noopener'),reduced?0:450); }
 function downloadApp(app,e){ if(!app||!app.downloads||!app.downloads.length)return; const r=e.currentTarget.getBoundingClientRect();
   const idx=e.currentTarget.dataset.i!==undefined?+e.currentTarget.dataset.i:0; const f=app.downloads[idx]||app.downloads[0]; if(!f||!f.file){ toast('아직 파일이 연결되지 않았습니다.'); return; }
@@ -151,8 +152,10 @@ function feedbackURL(app){ if(!SITE.feedbackForm) return '#'; const u=new URL(SI
 function fillDossier(app){
   $('#dNum').textContent='No. '+app.num+(app.period?' · '+app.period:''); $('#dTitle').textContent=app.name; $('#dLead').textContent=app.summary;
   $('#dPhoto').innerHTML=visHTML(app);
-  const acts=$('#dActs'); acts.innerHTML=`<button type="button" class="btn gold" ${app.run?'':'disabled'}>실행 · 새 탭에서 열기</button>${(app.downloads||[]).map((d,i)=>`<button type="button" class="btn line" data-i="${i}">↓ ${esc(d.label)}${d.size?` <small>(${esc(d.size)})</small>`:''}</button>`).join('')}`;
-  $('.gold',acts).onclick=e=>{ripple(e);runApp(app,e)}; $$('.line',acts).forEach(b=>b.onclick=e=>{ripple(e);downloadApp(app,e)});
+  const acts=$('#dActs');
+  if(app.private){ acts.innerHTML=`<button type="button" class="btn gold">실행</button><button type="button" class="btn line">다운로드</button>`; $$('button',acts).forEach(b=>b.onclick=e=>{ripple(e);privateNotice(e)}); }
+  else { acts.innerHTML=`<button type="button" class="btn gold" ${app.run?'':'disabled'}>실행 · 새 탭에서 열기</button>${(app.downloads||[]).map((d,i)=>`<button type="button" class="btn line" data-i="${i}">↓ ${esc(d.label)}${d.size?` <small>(${esc(d.size)})</small>`:''}</button>`).join('')}`;
+  $('.gold',acts).onclick=e=>{ripple(e);runApp(app,e)}; $$('.line',acts).forEach(b=>b.onclick=e=>{ripple(e);downloadApp(app,e)}); }
   $('#dAlt').innerHTML=app.altRun?`다른 버전: <a href="${esc(app.altRun.url)}" target="_blank" rel="noopener">${esc(app.altRun.label)}</a>`:'';
   $('#dAlt').hidden=!app.altRun;
   const n=$('#dNotice'); n.hidden=!app.notice; $('span',n).textContent=app.notice||'';
