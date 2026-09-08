@@ -325,8 +325,8 @@
       ],
       "story": "/content/yaksok-necut.md",
       "works": [],
-      "allowRun": true,
-      "allowDownload": true
+      "allowRun": false,
+      "allowDownload": false
     },
     {
       "slug": "next",
