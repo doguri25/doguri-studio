@@ -85,10 +85,13 @@ a{color:inherit}
 @keyframes introOut{to{opacity:0;visibility:hidden}}
 
 /* ───────────────────────── 상단 ───────────────────────── */
-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:22px clamp(18px,4vw,56px);
-  transition:padding .3s var(--ease),background .3s,border-color .3s;border-bottom:1px solid transparent}
-header.compact{padding-top:10px;padding-bottom:10px;background:rgba(9,10,17,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-color:var(--line)}
-.brand{font:700 18px/1 var(--serif);color:var(--gold);letter-spacing:.14em;display:flex;align-items:center;gap:12px;text-decoration:none}
+/* 헤더 높이는 스크롤 중 절대 바뀌지 않는다 — 높이가 바뀌면 문서 길이→scrollY→compact 토글이 서로를 물고 흔들린다(달 근처에서 재현됐던 버그).
+   compact 상태는 배경·블러·브랜드 축소(transform)만 바꾼다. */
+header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:16px clamp(18px,4vw,56px);min-height:64px;
+  transition:background .3s,border-color .3s;border-bottom:1px solid transparent}
+header.compact{background:rgba(9,10,17,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-color:var(--line)}
+.brand{font:700 18px/1 var(--serif);color:var(--gold);letter-spacing:.14em;display:flex;align-items:center;gap:12px;text-decoration:none;transform-origin:left center;transition:transform .3s var(--ease)}
+header.compact .brand{transform:scale(.92)}
 .brand i{width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#f4f0e2,var(--moon) 60%,#8d93a8);box-shadow:0 0 0 3px rgba(217,221,233,.12),0 0 14px rgba(217,221,233,.5);display:inline-block;transition:transform .3s var(--pop)}
 .brand:hover i{transform:scale(1.4)}
 nav{display:flex;align-items:center;gap:clamp(14px,3vw,30px)}
@@ -145,7 +148,8 @@ body.go .hero p.lead,body.go .hero .cta{animation:fade .9s .55s var(--ease) both
 .btn.gold:hover{background:var(--gold-2);box-shadow:0 10px 30px rgba(217,177,92,.32);transform:translateY(-2px)}
 .btn.line{border-color:rgba(230,226,218,.3);color:var(--paper)}
 .btn.line:hover{border-color:var(--gold);color:var(--gold-2);transform:translateY(-2px)}
-.btn[disabled]{opacity:.4;cursor:not-allowed;transform:none!important}
+.btn[disabled],.btn[aria-disabled="true"]{opacity:.4;cursor:not-allowed;transform:none!important;pointer-events:none}
+a.btn{text-decoration:none;cursor:pointer;-webkit-user-drag:none}
 .ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.35);transform:scale(0);animation:ripple .6s var(--ease) forwards;pointer-events:none}
 @keyframes ripple{to{transform:scale(4);opacity:0}}
 /* 밀랍 봉인이 찍혔다 깨지는 효과 */

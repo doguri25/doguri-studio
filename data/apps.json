@@ -112,7 +112,9 @@
             "/media/card-novel/works/w20260909-066l/20.webp"
           ]
         }
-      ]
+      ],
+      "pin": 1,
+      "added": "2026-09-08T09:00:00+09:00"
     },
     {
       "slug": "nooneleft",
@@ -157,7 +159,9 @@
         ]
       ],
       "story": "/content/nooneleft.md",
-      "private": true
+      "private": true,
+      "pin": 2,
+      "added": "2026-09-08T09:30:00+09:00"
     },
     {
       "slug": "morning-desk",
@@ -200,7 +204,9 @@
           "지역 선택 가능"
         ]
       ],
-      "story": "/content/morning-desk.md"
+      "story": "/content/morning-desk.md",
+      "pin": null,
+      "added": "2026-09-08T10:00:00+09:00"
     },
     {
       "slug": "samguk-dodgeball",
@@ -262,7 +268,9 @@
         ]
       ],
       "story": "/content/samguk-dodgeball.md",
-      "works": []
+      "works": [],
+      "pin": null,
+      "added": "2026-09-08T17:00:00+09:00"
     },
     {
       "slug": "next",
@@ -283,7 +291,9 @@
       "downloads": [],
       "notice": null,
       "facts": [],
-      "story": null
+      "story": null,
+      "pin": null,
+      "added": "2026-09-08T00:00:00+09:00"
     }
   ]
 }

@@ -44,7 +44,8 @@ if(fine&&!reduced){ (function loop(){ cx+=(px-cx)*.18; cy+=(py-cy)*.18; cursor.s
 })();
 
 /* ═══════════════ 헤더 · 패럴랙스 ═══════════════ */
-addEventListener('scroll',()=>{ $('#top').classList.toggle('compact',scrollY>40); $('.moon').style.setProperty('--sy',scrollY); },{passive:true});
+/* compact 전환에 히스테리시스(내려갈 땐 64px, 올라올 땐 16px) — 경계에서 왔다 갔다 하지 않게 */
+addEventListener('scroll',()=>{ const t=$('#top'); if(scrollY>64) t.classList.add('compact'); else if(scrollY<16) t.classList.remove('compact'); $('.moon').style.setProperty('--sy',scrollY); },{passive:true});
 
 /* ═══════════════ 그림·썸네일 ═══════════════ */
 function artHTML(kind){ return `<div class="art ${kind||'soon-art'}">${kind==='cards'?'<i></i><i></i><i></i>':kind==='sun'?'<i></i><i></i>':'<i></i>'}</div>`; }
@@ -61,7 +62,7 @@ function renderCards(){
     <span class="tab">${a.status==='soon'?'UNWRITTEN':(a.private?'PRIVATE · ':'SEALED · ')+esc(a.num)}</span>
     <div class="photo"><i class="tape l"></i><i class="tape r"></i>${visHTML(a)}<div class="lens" aria-hidden="true">${visHTML(a)}</div></div>
     <div class="meta"><h3><span class="num">${esc(a.num)}</span>${esc(a.name)}</h3><p>${esc(a.summary)}</p><div class="tags">${a.tags.map(t=>`<span>${esc(t)}</span>`).join('')}</div></div>
-    <div class="acts"><button type="button" class="btn gold run" ${a.run||a.private?'':'disabled'}>실행</button><button type="button" class="btn line dl" ${(a.downloads&&a.downloads.length)||a.private?'':'disabled'}>다운로드</button></div>
+    <div class="acts">${runLink(a,'실행','run')}<button type="button" class="btn line dl" ${(a.downloads&&a.downloads.length)||a.private?'':'disabled'}>다운로드</button></div>
     <span class="stamp" aria-hidden="true">${a.status==='soon'?'아직 봉인 중':a.private?'비공개 · 열람만':'봉인을 뜯어 보세요'}</span>
   </div></article>`).join('');
   $$('.file',grid).forEach(bindCard);
@@ -115,7 +116,8 @@ function bindCard(card){
     photo.addEventListener('pointermove',e=>{ const r=photo.getBoundingClientRect(); const lx=e.clientX-r.left, ly=e.clientY-r.top; const Z=2.1; photo.style.setProperty('--lx',lx+'px'); photo.style.setProperty('--ly',ly+'px');
       lensVis.style.width=r.width+'px'; lensVis.style.height=r.height+'px'; lensVis.style.transform=`translate(${55-lx*Z}px,${55-ly*Z}px) scale(${Z})`; });
   }
-  $('.run',card).addEventListener('click',e=>{ e.stopPropagation(); ripple(e); app.private?privateNotice(e):runApp(app,e); });
+  $('.run',card).addEventListener('click',e=>{ e.stopPropagation(); ripple(e); runApp(app,e); });
+  $('.run',card).addEventListener('keydown',e=>e.stopPropagation()); // Enter가 카드 열기로 새지 않게
   $('.dl',card).addEventListener('click',e=>{ e.stopPropagation(); ripple(e); app.private?privateNotice(e):downloadApp(app,e); });
   card.addEventListener('click',()=>{ if(!card.classList.contains('soon')) openCase(app.slug,card); else toast('아직 봉인이 마르지 않았습니다.'); });
   card.addEventListener('keydown',e=>{ if((e.key==='Enter'||e.key===' ')&&!card.classList.contains('soon')){e.preventDefault();openCase(app.slug,card);} });
@@ -123,7 +125,14 @@ function bindCard(card){
 function ripple(e){ const b=e.currentTarget; const r=b.getBoundingClientRect(); const s=document.createElement('span'); s.className='ripple'; const d=Math.max(r.width,r.height); s.style.cssText=`width:${d}px;height:${d}px;left:${e.clientX-r.left-d/2}px;top:${e.clientY-r.top-d/2}px`; b.appendChild(s); setTimeout(()=>s.remove(),650); }
 function slam(text,x,y){ if(reduced)return; const s=document.createElement('span'); s.className='slam'; s.textContent=text; s.style.left=x+'px'; s.style.top=y+'px'; document.body.appendChild(s); setTimeout(()=>s.remove(),1000); }
 function privateNotice(e){ const r=e.currentTarget.getBoundingClientRect(); slam('PRIVATE',r.left+r.width/2,r.top-10); toast('비공개입니다 — 아직 서가 밖으로 나가지 않은 이야기예요.'); }
-function runApp(app,e){ if(!app||!app.run)return; const r=e.currentTarget.getBoundingClientRect(); slam('OPEN',r.left+r.width/2,r.top-10); setTimeout(()=>window.open(app.run.url,'_blank','noopener'),reduced?0:450); }
+/* 실행 버튼은 진짜 링크(<a target=_blank>)다. window.open을 늦게 부르면 팝업 차단기에 막히는 브라우저가 있어서,
+   도장 효과만 얹고 새 탭은 브라우저가 링크 그대로 열게 둔다. */
+function runLink(app,label,cls=''){ const ok=!!(app.run&&app.run.url); const priv=!!app.private;
+  return `<a class="btn gold ${cls}" href="${ok?esc(app.run.url):'#'}" ${ok&&!priv?'target="_blank" rel="noopener"':''} ${!(ok||priv)?'aria-disabled="true" tabindex="-1"':''} role="button">${label}</a>`; }
+function runApp(app,e){ /* 링크의 기본 동작(새 탭)은 막지 않고 도장만 찍는다 */
+  if(app.private){ e.preventDefault(); privateNotice(e); return; }
+  if(!app||!app.run){ e.preventDefault(); return; }
+  const r=e.currentTarget.getBoundingClientRect(); slam('OPEN',r.left+r.width/2,r.top-10); }
 function downloadApp(app,e){ if(!app||!app.downloads||!app.downloads.length)return; const r=e.currentTarget.getBoundingClientRect();
   const idx=e.currentTarget.dataset.i!==undefined?+e.currentTarget.dataset.i:0; const f=app.downloads[idx]||app.downloads[0]; if(!f||!f.file){ toast('아직 파일이 연결되지 않았습니다.'); return; }
   slam('SAVE',r.left+r.width/2,r.top-10); const a=document.createElement('a'); a.href=f.file; if(/^https?:/.test(f.file)&&!f.file.startsWith(location.origin)){ a.target='_blank'; a.rel='noopener'; } else a.download=f.filename||''; document.body.appendChild(a); a.click(); a.remove(); }
@@ -153,8 +162,8 @@ function fillDossier(app){
   $('#dNum').textContent='No. '+app.num+(app.period?' · '+app.period:''); $('#dTitle').textContent=app.name; $('#dLead').textContent=app.summary;
   $('#dPhoto').innerHTML=visHTML(app);
   const acts=$('#dActs');
-  if(app.private){ acts.innerHTML=`<button type="button" class="btn gold">실행</button><button type="button" class="btn line">다운로드</button>`; $$('button',acts).forEach(b=>b.onclick=e=>{ripple(e);privateNotice(e)}); }
-  else { acts.innerHTML=`<button type="button" class="btn gold" ${app.run?'':'disabled'}>실행 · 새 탭에서 열기</button>${(app.downloads||[]).map((d,i)=>`<button type="button" class="btn line" data-i="${i}">↓ ${esc(d.label)}${d.size?` <small>(${esc(d.size)})</small>`:''}</button>`).join('')}`;
+  if(app.private){ acts.innerHTML=`${runLink(app,'실행')}<button type="button" class="btn line">다운로드</button>`; $('.gold',acts).onclick=e=>{ripple(e);runApp(app,e)}; $$('.line',acts).forEach(b=>b.onclick=e=>{ripple(e);privateNotice(e)}); }
+  else { acts.innerHTML=`${runLink(app,'실행 · 새 탭에서 열기')}${(app.downloads||[]).map((d,i)=>`<button type="button" class="btn line" data-i="${i}">↓ ${esc(d.label)}${d.size?` <small>(${esc(d.size)})</small>`:''}</button>`).join('')}`;
   $('.gold',acts).onclick=e=>{ripple(e);runApp(app,e)}; $$('.line',acts).forEach(b=>b.onclick=e=>{ripple(e);downloadApp(app,e)}); }
   $('#dAlt').innerHTML=app.altRun?`다른 버전: <a href="${esc(app.altRun.url)}" target="_blank" rel="noopener">${esc(app.altRun.label)}</a>`:'';
   $('#dAlt').hidden=!app.altRun;
@@ -270,10 +279,21 @@ addEventListener('popstate',()=>{ if(!viewer.hidden) closeViewer(); const l=pars
 function fillDossierSwap(slug){ const n=APPS.find(a=>a.slug===slug&&a.status!=='soon'); if(!n){ closeCase(true); return; } setTimeout(()=>{ current=n; currentCard=cardOf(slug); fillDossier(n); dossier.scrollTo({top:0}); requestAnimationFrame(()=>dossier.classList.add('ready')); },60); }
 
 /* ═══════════════ 시작: 데이터 읽기 ═══════════════ */
+/* 서가 순서: pin(1,2,…)이 있는 앱이 그 번호 순으로 먼저, 나머지는 added(올린 날짜) 최신순, '쓰는 중'은 맨 뒤.
+   apps.json 배열 순서와 무관하게 여기서 정한다 — 관리 화면 「서가 순서」에서 pin을 바꾼다. */
+function shelfOrder(list){
+  const t=a=>Date.parse(a.added||'')||0;
+  return list.map((a,i)=>({a,i})).sort((x,y)=>{
+    const A=x.a,B=y.a; const sa=A.status==='soon'?1:0, sb=B.status==='soon'?1:0; if(sa!==sb) return sa-sb;
+    const pa=A.pin?1:0, pb=B.pin?1:0; if(pa!==pb) return pb-pa;
+    if(pa&&pb&&A.pin!==B.pin) return A.pin-B.pin;
+    const d=t(B)-t(A); if(d) return d; return x.i-y.i;
+  }).map(x=>x.a);
+}
 async function boot(){
   try{
     const r=await fetch('/data/apps.json',{cache:'no-cache'}); if(!r.ok) throw new Error(r.status);
-    const data=await r.json(); SITE=data.site||{}; APPS=data.apps||[];
+    const data=await r.json(); SITE=data.site||{}; APPS=shelfOrder(data.apps||[]);
   }catch(e){
     grid.innerHTML='<div class="loading err">앱 목록(data/apps.json)을 읽지 못했습니다.<br>파일을 직접 열면(file://) 읽을 수 없어요 — 저장소 폴더에서 <code>npx serve -s .</code> 로 띄운 뒤 열어 주세요.</div>';
     return;

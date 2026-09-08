@@ -50,10 +50,25 @@ function mountGoogle(clientId){
   s.onerror=()=>{ $('#gsi').innerHTML='<span class="hint">구글 로그인 스크립트를 불러오지 못했습니다. 네트워크를 확인해 주세요.</span>'; };
   document.head.appendChild(s);
 }
+/* 잠금(5회 실패 → 1시간): 서버가 429로 lockedUntil을 주면 그 시각까지 입력을 막고 남은 시간을 보여 준다. 새로고침해도 유지(localStorage). */
+const LKEY='dgr-admin-lock'; let lockTimer=null;
+function lockedUntil(){ try{ const v=+store.get(LKEY)||0; return v>Date.now()?v:0; }catch(e){ return 0; } }
+function showLock(until){
+  store.set(LKEY,String(until)); const box=$('#lockBox'); box.hidden=false; $('#pw').disabled=true; $('#btnPw').disabled=true;
+  const tick=()=>{ const left=until-Date.now(); if(left<=0){ clearInterval(lockTimer); box.hidden=true; $('#pw').disabled=false; $('#btnPw').disabled=false; store.del(LKEY); st($('#stLogin'),'다시 시도할 수 있어요.'); return; }
+    const m=Math.floor(left/60000), sec=Math.floor(left%60000/1000); $('#lockMsg').textContent=`비밀번호를 5번 틀려서 로그인이 막혔습니다. ${m}분 ${String(sec).padStart(2,'0')}초 뒤에 다시 할 수 있어요.`; };
+  clearInterval(lockTimer); tick(); lockTimer=setInterval(tick,1000);
+}
 async function login(body){
+  const lu=lockedUntil(); if(lu){ showLock(lu); return; }
   st($('#stLogin'),'확인하는 중…');
-  try{ const s=await api('login',body,{noAuth:true}); SESSION={token:s.token,exp:s.exp,who:s.who}; store.set(SKEY,JSON.stringify(SESSION)); await enter(); }
-  catch(e){ st($('#stLogin'),e.message,'err'); }
+  try{
+    const r=await fetch('/api/admin?op=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store'});
+    let j={}; try{ j=await r.json(); }catch(e){}
+    if(r.status===429&&j.lockedUntil){ showLock(+j.lockedUntil); st($('#stLogin'),''); return; }
+    if(!r.ok) throw new Error(j.error||`${r.status} ${r.statusText}`);
+    store.del(LKEY); SESSION={token:j.token,exp:j.exp,who:j.who}; store.set(SKEY,JSON.stringify(SESSION)); await enter();
+  }catch(e){ st($('#stLogin'),e.message,'err'); }
 }
 $('#btnPw').addEventListener('click',()=>{ const v=$('#pw').value; if(!v){ st($('#stLogin'),'비밀번호를 적어 주세요.','err'); $('#pw').focus(); return; } login({password:v}); });
 $('#pw').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#btnPw').click(); });
@@ -61,8 +76,8 @@ $('#pw').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#btnPw').click()
 (function(){ const pw=$('#pw'), hint=$('#pwHint'); let t=null;
   const clean=()=>{ const v=pw.value, c=v.replace(/[^\x20-\x7E]/g,''); if(c!==v){ pw.value=c; hint.classList.add('on'); clearTimeout(t); t=setTimeout(()=>hint.classList.remove('on'),2600); } };
   ['input','compositionend','change','blur'].forEach(ev=>pw.addEventListener(ev,clean)); })();
-const PANELS=['#pWorks','#pNew','#pText'];
-function logout(msg){ SESSION=null; store.del(SKEY); $('#sessionBox').hidden=true; $('#loginBox').hidden=false; PANELS.forEach(id=>$(id).hidden=true); $('#pw').value=''; st($('#stLogin'),msg||'나왔습니다.'); }
+const PANELS=['#pWorks','#pNew','#pText','#pOrder'];
+function logout(msg){ SESSION=null; store.del(SKEY); $('#sessionBox').hidden=true; $('#loginBox').hidden=false; PANELS.forEach(id=>$(id).hidden=true); qnavSync(); $('#pw').value=''; st($('#stLogin'),msg||'나왔습니다.'); }
 $('#btnLogout').addEventListener('click',()=>logout());
 async function enter(){
   try{
@@ -70,7 +85,7 @@ async function enter(){
     $('#loginBox').hidden=true; $('#sessionBox').hidden=false;
     const until=new Date(SESSION.exp); const hh=String(until.getHours()).padStart(2,'0'), mm=String(until.getMinutes()).padStart(2,'0');
     st($('#stSession'),`들어왔습니다 · ${SESSION.who==='google'?'구글 계정':'비밀번호'} · ${CFG.repo} (${CFG.branch}) · 앱 ${APPSJSON.apps.length}개 · ${hh}:${mm}까지 유효`,'ok');
-    PANELS.forEach(id=>$(id).hidden=false); buildAppSel(); renderWorks(); buildTextSel(); loadText();
+    PANELS.forEach(id=>$(id).hidden=false); qnavSync(); buildAppSel(); renderWorks(); buildTextSel(); loadText(); renderOrder(true);
   }catch(e){ st($('#stLogin'),'들어가지 못했습니다: '+e.message,'err'); if(!SESSION) return; }
 }
 async function boot(){
@@ -81,7 +96,15 @@ async function boot(){
   if(canGoogle) mountGoogle(CFG.google);
   loadSession();
   if(SESSION){ st($('#stLogin'),'지난 로그인을 이어가는 중…'); await enter(); }
-  else st($('#stLogin'),(canGoogle||canPw)?'':'로그인 방법이 아직 없습니다.');
+  else { st($('#stLogin'),(canGoogle||canPw)?'':'로그인 방법이 아직 없습니다.'); const lu=lockedUntil(); if(lu) showLock(lu); }
+  qnavInit();
+}
+/* ═══════════════ 빠른 이동 바 ═══════════════ */
+function qnavSync(){ $$('#qnav a[data-p]').forEach(a=>{ a.hidden=$('#'+a.dataset.p).hidden; }); }
+function qnavInit(){
+  qnavSync();
+  $$('#qnav a[href^="#"]').forEach(a=>a.addEventListener('click',e=>{ const t=$(a.getAttribute('href')); if(!t) return; e.preventDefault(); t.scrollIntoView({behavior:'smooth',block:'start'}); history.replaceState(null,'',a.getAttribute('href')); }));
+  if('IntersectionObserver' in window){ const io=new IntersectionObserver(es=>{ es.forEach(en=>{ if(en.isIntersecting){ $$('#qnav a.on').forEach(x=>x.classList.remove('on')); const a=$(`#qnav a[data-p="${en.target.id}"]`); if(a) a.classList.add('on'); } }); },{rootMargin:'-20% 0px -70% 0px'}); $$('.panel').forEach(p=>io.observe(p)); }
 }
 
 /* ═══════════════ 작품 목록 ═══════════════ */
@@ -255,6 +278,39 @@ $('#btnSaveText').addEventListener('click',async()=>{
     TORIG={summary,notice,story}; TNOTE=''; $('#tSummary').value=summary; $('#tNotice').value=notice;
     st($('#stText'),'게시했습니다. 약 1분 뒤 사이트에 반영돼요. (상세 화면을 다시 열면 보입니다)','ok'); buildAppSel(); renderWorks();
   }catch(e){ st($('#stText'),'실패: '+e.message,'err'); btn.disabled=false; }
+});
+
+/* ═══════════════ 서가 순서: 고정(pin) + 자동(최신순) ═══════════════ */
+let ODIRTY=false, OPINS=null; // OPINS: {slug: pin|null} 편집 중 상태
+function shelfOrder(list){ const t=a=>Date.parse(a.added||'')||0;
+  return list.map((a,i)=>({a,i})).sort((x,y)=>{ const A=x.a,B=y.a; const sa=A.status==='soon'?1:0, sb=B.status==='soon'?1:0; if(sa!==sb) return sa-sb; const pa=A.pin?1:0, pb=B.pin?1:0; if(pa!==pb) return pb-pa; if(pa&&pb&&A.pin!==B.pin) return A.pin-B.pin; const d=t(B)-t(A); if(d) return d; return x.i-y.i; }).map(x=>x.a); }
+function normalizePins(){ const pinned=Object.keys(OPINS).filter(k=>OPINS[k]).sort((a,b)=>OPINS[a]-OPINS[b]); pinned.forEach((k,i)=>OPINS[k]=i+1); }
+function renderOrder(reset){
+  if(reset||!OPINS){ OPINS={}; APPSJSON.apps.forEach(a=>OPINS[a.slug]=a.pin||null); ODIRTY=false; }
+  const list=shelfOrder(APPSJSON.apps.map(a=>({...a,pin:OPINS[a.slug]||null}))); /* 편집 중 pin은 그림자 사본에만 — 다른 칸의 커밋에 섞이지 않게 */ const pinnedN=list.filter(a=>a.pin).length; const box=$('#olist');
+  const fmt=a=>{ const d=new Date(a.added||''); return isNaN(d)?'날짜 없음':`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`; };
+  box.innerHTML=list.map((a,i)=>{ const soon=a.status==='soon'; const pin=!!a.pin;
+    return `<div class="oitem ${pin?'pinned':''} ${soon?'soon':''}"><div class="th">${a.thumb?`<img src="${esc(a.thumb)}" alt="">`:''}</div><div class="ti"><b>${i+1}. ${esc(a.name)} <small style="font:500 11px/1 var(--mono);color:var(--gold);letter-spacing:.15em">No.${esc(a.num||'')}</small></b><span>${soon?'<span class="tag">쓰는 중 · 항상 맨 뒤</span>':pin?`<span class="tag pin">📌 고정 ${a.pin}번</span>`:'<span class="tag">자동 · 최신순</span>'}올린 날짜 ${fmt(a)}</span></div><div class="ops">${soon?'':pin?`<button type="button" class="ib" data-op="up" data-s="${esc(a.slug)}" ${a.pin===1?'disabled':''}>▲</button><button type="button" class="ib" data-op="down" data-s="${esc(a.slug)}" ${a.pin===pinnedN?'disabled':''}>▼</button><button type="button" class="ib" data-op="unpin" data-s="${esc(a.slug)}">고정 해제</button>`:`<button type="button" class="ib" data-op="pin" data-s="${esc(a.slug)}">📌 고정</button>`}</div></div>`; }).join('');
+  $$('.ib',box).forEach(b=>b.addEventListener('click',()=>orderOp(b.dataset.op,b.dataset.s)));
+  $('#btnSaveOrder').disabled=!ODIRTY; st($('#stOrder'),ODIRTY?'게시하지 않은 순서 변경이 있습니다.':'');
+}
+function orderOp(op,slug){
+  normalizePins(); const cur=OPINS[slug]||0; const pinnedN=Object.values(OPINS).filter(Boolean).length;
+  if(op==='pin'){ OPINS[slug]=pinnedN+1; }
+  else if(op==='unpin'){ OPINS[slug]=null; normalizePins(); }
+  else if(op==='up'&&cur>1){ const other=Object.keys(OPINS).find(k=>OPINS[k]===cur-1); OPINS[other]=cur; OPINS[slug]=cur-1; }
+  else if(op==='down'&&cur&&cur<pinnedN){ const other=Object.keys(OPINS).find(k=>OPINS[k]===cur+1); OPINS[other]=cur; OPINS[slug]=cur+1; }
+  else return;
+  ODIRTY=true; renderOrder();
+}
+$('#btnResetOrder').addEventListener('click',()=>renderOrder(true));
+$('#btnSaveOrder').addEventListener('click',async()=>{
+  if(DIRTY){ st($('#stOrder'),'작품집에 게시하지 않은 변경이 있어요. 02의 「변경 사항 게시」를 먼저 눌러 주세요.','err'); return; }
+  const btn=$('#btnSaveOrder'); btn.disabled=true; st($('#stOrder'),'게시하는 중…');
+  try{ const pins={...OPINS}; await readAppsJson(); APPSJSON.apps.forEach(a=>{ a.pin=pins[a.slug]||null; });
+    await commitFiles('서가 순서 변경',[{path:'data/apps.json',text:JSON.stringify(APPSJSON,null,2)+'\n'}],[]);
+    renderOrder(true); st($('#stOrder'),'게시했습니다. 약 1분 뒤 서가 순서가 바뀝니다.','ok'); }
+  catch(e){ st($('#stOrder'),'실패: '+e.message,'err'); btn.disabled=false; }
 });
 
 /* ═══════════════ 시작 ═══════════════ */

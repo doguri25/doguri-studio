@@ -9,6 +9,10 @@
      GOOGLE_CLIENT_ID  로그인 방법 B: 구글 OAuth 클라이언트 ID (…apps.googleusercontent.com)
      ADMIN_EMAIL       방법 B에서 허용할 구글 계정 (쉼표로 여러 개)
      SESSION_SECRET    선택. 로그인 세션 서명 키 (없으면 GITHUB_TOKEN에서 파생)
+     KV_REST_API_URL / KV_REST_API_TOKEN   선택. Upstash Redis(Vercel Marketplace)가 있으면 로그인 실패 잠금을 서버 재시작과 무관하게 기억
+                       (UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN 이름도 인식)
+
+   로그인 실패 잠금: 5회 틀리면 1시간 동안 그 IP와 전체에 시도 금지 (429 + lockedUntil).
 
    요청 (모두 JSON)
      GET  ?op=config                         → 어떤 로그인 방법이 켜져 있는지
@@ -41,7 +45,7 @@ module.exports = async function handler(req, res) {
       return send(res, 405, { error: 'GET은 op=config만 받습니다' });
     }
     if (req.method !== 'POST') return send(res, 405, { error: 'POST만 받습니다' });
-    if (op === 'login') return send(res, 200, await login(body));
+    if (op === 'login') return send(res, 200, await login(body, req));
     const who = auth(req);
     if (!who) return send(res, 401, { error: '로그인이 필요합니다' });
     if (!ENV.GITHUB_TOKEN) return send(res, 500, { error: 'Vercel 환경변수 GITHUB_TOKEN이 없습니다' });
@@ -51,7 +55,7 @@ module.exports = async function handler(req, res) {
     if (op === 'commit') return send(res, 200, await commit(body));
     return send(res, 400, { error: '모르는 요청: ' + op });
   } catch (e) {
-    return send(res, e.status || 500, { error: e.message || String(e) });
+    return send(res, e.status || 500, { error: e.message || String(e), ...(e.extra || {}) });
   }
 };
 
@@ -90,7 +94,44 @@ function same(a, b) {
   const x = crypto.createHash('sha256').update(String(a)).digest(), y = crypto.createHash('sha256').update(String(b)).digest();
   return crypto.timingSafeEqual(x, y);
 }
-async function login(body) {
+/* ───────────── 로그인 실패 잠금 ─────────────
+   5회 실패 → 1시간 잠금. 상태는 이 함수 인스턴스의 메모리에, Upstash Redis가 연결돼 있으면 거기에도 둔다(인스턴스가 바뀌어도 유지). */
+const LOCK_MAX = 5, LOCK_SEC = 60 * 60;
+const MEM = new Map();                       // key → {n, first, until}
+const KV_URL = ENV.KV_REST_API_URL || ENV.UPSTASH_REDIS_REST_URL, KV_TOKEN = ENV.KV_REST_API_TOKEN || ENV.UPSTASH_REDIS_REST_TOKEN;
+async function kv(cmd) {
+  if (!KV_URL || !KV_TOKEN) return null;
+  try { const r = await fetch(KV_URL, { method: 'POST', headers: { 'Authorization': 'Bearer ' + KV_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify(cmd) }); const j = await r.json(); return j.result; } catch (e) { return null; }
+}
+function clientKey(req) { return 'ip:' + (String(req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || '').split(',')[0].trim() || 'unknown'); }
+async function lockedUntil(key) {
+  const now = Date.now(); const m = MEM.get(key);
+  if (m && m.until > now) return m.until;
+  if (KV_URL) { const ttl = await kv(['TTL', 'lock:' + key]); if (typeof ttl === 'number' && ttl > 0) return now + ttl * 1000; }
+  return 0;
+}
+async function noteFail(key) {
+  const now = Date.now(); let m = MEM.get(key);
+  if (!m || m.first + LOCK_SEC * 1000 < now) m = { n: 0, first: now, until: 0 };
+  m.n++; if (m.n >= LOCK_MAX) m.until = now + LOCK_SEC * 1000; MEM.set(key, m);
+  let n = m.n;
+  if (KV_URL) { const c = await kv(['INCR', 'fail:' + key]); if (typeof c === 'number') { n = Math.max(n, c); if (c === 1) await kv(['EXPIRE', 'fail:' + key, LOCK_SEC]); if (c >= LOCK_MAX) await kv(['SET', 'lock:' + key, '1', 'EX', LOCK_SEC]); } }
+  return { n, until: n >= LOCK_MAX ? now + LOCK_SEC * 1000 : 0, left: Math.max(0, LOCK_MAX - n) };
+}
+async function clearFail(key) { MEM.delete(key); if (KV_URL) await kv(['DEL', 'fail:' + key]); }
+async function guardLock(req) {
+  const until = Math.max(await lockedUntil(clientKey(req)), await lockedUntil('all'));
+  if (until) { const e = err(429, `틀린 시도가 ${LOCK_MAX}회를 넘어 잠겼습니다. ${Math.ceil((until - Date.now()) / 60000)}분 뒤 다시 해 주세요.`); e.extra = { lockedUntil: until }; throw e; }
+}
+async function failAndMaybeLock(req, message) {
+  const a = await noteFail(clientKey(req)), b = await noteFail('all');
+  const until = Math.max(a.until, b.until); await sleep(700);
+  if (until) { const e = err(429, `${LOCK_MAX}회 틀려서 1시간 동안 잠겼습니다.`); e.extra = { lockedUntil: until }; throw e; }
+  const left = Math.min(a.left, b.left); const e = err(401, `${message} (남은 시도 ${left}회)`); e.extra = { attemptsLeft: left }; throw e;
+}
+
+async function login(body, req) {
+  await guardLock(req);
   if (body.credential) {
     if (!ENV.GOOGLE_CLIENT_ID || !ENV.ADMIN_EMAIL) throw err(400, '구글 로그인이 설정되지 않았습니다');
     const cred = String(body.credential);
@@ -103,13 +144,13 @@ async function login(body) {
     if (String(info.email_verified) !== 'true') throw err(401, '확인된 구글 계정이 아닙니다');
     const allowed = ENV.ADMIN_EMAIL.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
     const email = String(info.email || '').toLowerCase();
-    if (!allowed.some(a => same(a, email))) { await sleep(600); throw err(403, '이 구글 계정은 관리자가 아닙니다'); }
-    return issue('google');
+    if (!allowed.some(a => same(a, email))) await failAndMaybeLock(req, '이 구글 계정은 관리자가 아닙니다');
+    await clearFail(clientKey(req)); await clearFail('all'); return issue('google');
   }
   if (typeof body.password === 'string') {
     if (!ENV.ADMIN_PASSWORD) throw err(400, '비밀번호 로그인이 설정되지 않았습니다');
-    if (body.password.length > 256 || !same(body.password, ENV.ADMIN_PASSWORD)) { await sleep(900); throw err(401, '비밀번호가 맞지 않습니다'); }
-    return issue('password');
+    if (body.password.length > 256 || !same(body.password, ENV.ADMIN_PASSWORD)) await failAndMaybeLock(req, '비밀번호가 맞지 않습니다');
+    await clearFail(clientKey(req)); await clearFail('all'); return issue('password');
   }
   throw err(400, '로그인 정보가 없습니다');
 }
