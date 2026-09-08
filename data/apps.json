@@ -309,13 +309,10 @@
         "type": "external",
         "url": "https://doguri25.github.io/yaksoknekut/"
       },
-      "altRun": {
-        "label": "GitHub 저장소 (소스 · 수정 기록)",
-        "url": "https://github.com/doguri25/yaksoknekut"
-      },
+      "altRun": null,
       "downloads": [
         {
-          "label": "윈도우 앱 (zip · Releases)",
+          "label": "윈도우 앱 (zip)",
           "file": "https://github.com/doguri25/yaksoknekut/releases/latest",
           "filename": "",
           "size": ""

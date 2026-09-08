@@ -21,7 +21,7 @@
      POST op=file   {path}                    → content/<slug>.md 같은 텍스트 파일 (없으면 missing:true)
      POST op=blob   {base64}                  → {sha}  이미지 1장을 블롭으로
      POST op=commit {message, files:[{path,sha}|{path,text}], deletions:[path]} → {sha}
-   쓸 수 있는 경로: media/<앱>/works/<작품>/*.webp|jpg|png · data/apps.json · content/<앱>.md
+   쓸 수 있는 경로: media/<앱>/works/<작품>/*.webp|jpg|png · data/overrides.json · content/<앱>.md  (apps.json은 읽기만)
 */
 const crypto = require('crypto');
 
@@ -30,9 +30,9 @@ const REPO = ENV.GITHUB_REPO || 'doguri25/doguri-studio';
 const BRANCH = ENV.GITHUB_BRANCH || 'main';
 const SESSION_HOURS = 12;
 const MAX_BLOB = 3 * 1024 * 1024;           // base64 기준 3MB
-const OK_WRITE = [/^media\/[a-z0-9-]+\/works\/[a-z0-9-]+\/[a-z0-9-]+\.(webp|jpe?g|png)$/i, /^data\/apps\.json$/, /^content\/[a-z0-9-]+\.md$/];
+const OK_WRITE = [/^media\/[a-z0-9-]+\/works\/[a-z0-9-]+\/[a-z0-9-]+\.(webp|jpe?g|png)$/i, /^data\/overrides\.json$/, /^content\/[a-z0-9-]+\.md$/];  // apps.json은 코드와 함께 배포되는 기본값이라 관리 화면이 건드리지 않는다
 const OK_DELETE = [/^media\/[a-z0-9-]+\/works\/[a-z0-9-]+\/[a-z0-9-]+\.(webp|jpe?g|png)$/i];
-const OK_READ = [/^data\/apps\.json$/, /^content\/[a-z0-9-]+\.md$/];
+const OK_READ = [/^data\/apps\.json$/, /^data\/overrides\.json$/, /^content\/[a-z0-9-]+\.md$/];
 
 module.exports = async function handler(req, res) {
   const url = new URL(req.url || '/', 'http://x');
@@ -191,7 +191,7 @@ async function commit(body) {
   if (!files.length && !deletions.length) throw err(400, '올릴 파일이 없습니다');
   for (const f of files) { if (!f || typeof f.path !== 'string' || !OK_WRITE.some(re => re.test(f.path))) throw err(400, '허용되지 않은 경로: ' + (f && f.path)); }
   for (const p of deletions) { if (!OK_DELETE.some(re => re.test(p))) throw err(400, '지울 수 없는 경로: ' + p); }
-  if (files.some(f => f.path === 'data/apps.json')) { try { JSON.parse(files.find(f => f.path === 'data/apps.json').text); } catch (e) { throw err(400, 'apps.json이 올바른 JSON이 아닙니다'); } }
+  for (const f of files) { if (/\.json$/.test(f.path) && typeof f.text === 'string') { try { JSON.parse(f.text); } catch (e) { throw err(400, f.path + '이 올바른 JSON이 아닙니다'); } } }
 
   const ref = await gh(`${repo()}/git/ref/heads/${encodeURIComponent(BRANCH)}`); const headSha = ref.object.sha;
   const head = await gh(`${repo()}/git/commits/${headSha}`); const baseTree = head.tree.sha;

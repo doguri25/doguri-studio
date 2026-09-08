@@ -12,6 +12,8 @@ const toast=(msg)=>{const t=$('#toast');t.textContent=msg;t.classList.add('on');
 const store={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const SITE_NAME='도구리 작업실';
+/* 빌드 스탬프: index.html이 이 파일을 site.js?v=… 로 불렀다면 그 값을 apps.json 요청에도 붙인다(tools/stamp.py) */
+const BUILD=(()=>{ try{ const src=(document.currentScript&&document.currentScript.src)||''; const m=/[?&]v=([0-9a-z]+)/i.exec(src); return m?m[1]:''; }catch(e){ return ''; } })();
 let SITE={}, APPS=[];
 
 /* ═══════════════ 인트로: 처음 온 사람에게만 ═══════════════ */
@@ -26,9 +28,13 @@ else{ intro.addEventListener('click',finishIntro); setTimeout(finishIntro,1500);
 /* ═══════════════ 촛불 · 커서 · 속삭임 ═══════════════ */
 const root=document.documentElement, whispers=$('#whispers'), cursor=$('.cursor');
 let px=innerWidth/2, py=innerHeight*.38, cx=px, cy=py, found=new Set();
-function movePointer(x,y){ px=x;py=y; root.style.setProperty('--x',x+'px'); root.style.setProperty('--y',y+'px');
-  const r=whispers.getBoundingClientRect(); whispers.style.setProperty('--cx',(x-r.left)+'px'); whispers.style.setProperty('--cy',(y-r.top)+'px');
-  $$('.whisper').forEach((c,i)=>{ if(found.has(i))return; const b=c.getBoundingClientRect(); const dx=b.left+b.width/2-x, dy=b.top+b.height/2-y; if(Math.hypot(dx,dy)<130){ found.add(i); $('#whisperN').textContent=found.size; const bd=$('#whisperBadge'); bd.classList.remove('bump'); void bd.offsetWidth; bd.classList.add('bump'); if(found.size===3) toast('속삭임을 모두 들었습니다. 이제 서랍을 열어도 됩니다.'); } }); }
+/* 포인터 처리는 프레임당 한 번(rAF)으로 묶는다 — pointermove마다 레이아웃을 읽고 스타일을 쓰면 PC에서 끊긴다 */
+let ptrDirty=false, whisperEls=null, whisperBoxes=null, whisperBoxT=0;
+function movePointer(x,y){ px=x;py=y; if(!ptrDirty){ ptrDirty=true; requestAnimationFrame(applyPointer); } }
+function applyPointer(){ ptrDirty=false; const x=px,y=py; root.style.setProperty('--x',x+'px'); root.style.setProperty('--y',y+'px');
+  const now=performance.now(); if(!whisperEls||now-whisperBoxT>600){ whisperEls=$$('.whisper'); const wr=whispers.getBoundingClientRect(); whisperBoxes={wr,list:whisperEls.map(c=>c.getBoundingClientRect())}; whisperBoxT=now; }
+  const r=whisperBoxes.wr; whispers.style.setProperty('--cx',(x-r.left)+'px'); whispers.style.setProperty('--cy',(y-r.top)+'px');
+  whisperEls.forEach((c,i)=>{ if(found.has(i))return; const b=whisperBoxes.list[i]; const dx=b.left+b.width/2-x, dy=b.top+b.height/2-y; if(Math.hypot(dx,dy)<130){ found.add(i); $('#whisperN').textContent=found.size; const bd=$('#whisperBadge'); bd.classList.remove('bump'); void bd.offsetWidth; bd.classList.add('bump'); if(found.size===3) toast('속삭임을 모두 들었습니다. 이제 서랍을 열어도 됩니다.'); } }); }
 addEventListener('pointermove',e=>movePointer(e.clientX,e.clientY),{passive:true});
 addEventListener('touchmove',e=>{const t=e.touches[0];if(t)movePointer(t.clientX,t.clientY)},{passive:true});
 addEventListener('touchstart',e=>{const t=e.touches[0];if(t)movePointer(t.clientX,t.clientY)},{passive:true});
@@ -37,15 +43,20 @@ if(fine&&!reduced){ (function loop(){ cx+=(px-cx)*.18; cy+=(py-cy)*.18; cursor.s
 
 /* ═══════════════ 반딧불 · 먼지 ═══════════════ */
 (function(){ if(reduced)return; const c=$('#dust'),ctx=c.getContext('2d'); let W,H,P=[]; const N=70;
-  const size=()=>{W=c.width=innerWidth*devicePixelRatio;H=c.height=innerHeight*devicePixelRatio;c.style.width=innerWidth+'px';c.style.height=innerHeight+'px'};
+  const DPR=1; /* 먼지는 작은 점이라 고해상도가 필요 없다 — 4K·레티나에서 픽셀 4배를 아낀다 */
+  const size=()=>{W=c.width=innerWidth*DPR;H=c.height=innerHeight*DPR;c.style.width=innerWidth+'px';c.style.height=innerHeight+'px'};
   size(); addEventListener('resize',size);
   for(let i=0;i<N;i++)P.push({x:Math.random(),y:Math.random(),r:.5+Math.random()*1.4,a:.15+Math.random()*.45,s:.00005+Math.random()*.00012,t:Math.random()*6.28,k:Math.random()<.18});
-  (function frame(){ ctx.clearRect(0,0,W,H); for(const p of P){ p.y-=p.s; p.t+=.004; p.x+=Math.sin(p.t)*.00008; if(p.y<-.02){p.y=1.02;p.x=Math.random()} const gx=p.x*W,gy=p.y*H; const d=Math.hypot(gx/devicePixelRatio-px,gy/devicePixelRatio-py); const glow=Math.max(0,1-d/380); const tw=p.k?(.6+.4*Math.sin(p.t*9)):1; ctx.beginPath(); ctx.arc(gx,gy,p.r*devicePixelRatio*(1+glow*.8)*(p.k?1.6:1),0,6.28); ctx.fillStyle=p.k?`rgba(239,208,141,${p.a*tw*(0.5+glow*.8)})`:`rgba(217,221,233,${p.a*(0.3+glow*.9)})`; ctx.fill(); } requestAnimationFrame(frame); })();
+  /* 오버레이가 덮여 있거나(body.lock) 탭이 안 보이면 그리지 않는다. 좌표는 CSS픽셀(DPR=1)이라 변환이 없다 */
+  let odd=false;
+  (function frame(){ if(document.body.classList.contains('lock')||document.hidden){ setTimeout(frame,250); return; }
+    odd=!odd; if(odd){ requestAnimationFrame(frame); return; } /* 30fps면 충분 — 헤더 블러 등 위 레이어의 재합성 부담을 반으로 */
+    ctx.clearRect(0,0,W,H); for(const p of P){ p.y-=p.s; p.t+=.004; p.x+=Math.sin(p.t)*.00008; if(p.y<-.02){p.y=1.02;p.x=Math.random()} const gx=p.x*W,gy=p.y*H; const d=Math.hypot(gx-px,gy-py); const glow=Math.max(0,1-d/380); const tw=p.k?(.6+.4*Math.sin(p.t*9)):1; ctx.beginPath(); ctx.arc(gx,gy,p.r*(1+glow*.8)*(p.k?1.6:1),0,6.28); ctx.fillStyle=p.k?`rgba(239,208,141,${p.a*tw*(0.5+glow*.8)})`:`rgba(217,221,233,${p.a*(0.3+glow*.9)})`; ctx.fill(); } requestAnimationFrame(frame); })();
 })();
 
 /* ═══════════════ 헤더 · 패럴랙스 ═══════════════ */
 /* compact 전환에 히스테리시스(내려갈 땐 64px, 올라올 땐 16px) — 경계에서 왔다 갔다 하지 않게 */
-addEventListener('scroll',()=>{ const t=$('#top'); if(scrollY>64) t.classList.add('compact'); else if(scrollY<16) t.classList.remove('compact'); $('.moon').style.setProperty('--sy',scrollY); },{passive:true});
+addEventListener('scroll',()=>{ whisperBoxT=0; const t=$('#top'); if(scrollY>64) t.classList.add('compact'); else if(scrollY<16) t.classList.remove('compact'); $('.moon').style.setProperty('--sy',scrollY); },{passive:true});
 
 /* ═══════════════ 그림·썸네일 ═══════════════ */
 function artHTML(kind){ return `<div class="art ${kind||'soon-art'}">${kind==='cards'?'<i></i><i></i><i></i>':kind==='sun'?'<i></i><i></i>':'<i></i>'}</div>`; }
@@ -62,7 +73,7 @@ function renderCards(){
     <span class="tab">${a.status==='soon'?'UNWRITTEN':(a.private?'PRIVATE · ':'SEALED · ')+esc(a.num)}</span>
     <div class="photo"><i class="tape l"></i><i class="tape r"></i>${visHTML(a)}<div class="lens" aria-hidden="true">${visHTML(a)}</div></div>
     <div class="meta"><h3><span class="num">${esc(a.num)}</span>${esc(a.name)}</h3><p>${esc(a.summary)}</p><div class="tags">${a.tags.map(t=>`<span>${esc(t)}</span>`).join('')}</div></div>
-    <div class="acts">${a.cardButton==='works'?`<a class="btn gold run" href="/project/${esc(a.slug)}/works" role="button">작품 보기</a>`:runLink(a,'실행','run')}<button type="button" class="btn line dl" ${canDl(a)||a.private?'':'disabled'} ${a.downloads&&a.downloads.length&&a.allowDownload===false?'title="지금은 내려받을 수 없어요"':''}>다운로드</button></div>
+    <div class="acts">${a.cardButton==='works'&&validWorks(a).length?`<a class="btn gold run" href="/project/${esc(a.slug)}/works" role="button">작품 보기</a>`:runLink(a,'실행','run')}<button type="button" class="btn line dl" ${canDl(a)||a.private?'':'disabled'} ${a.downloads&&a.downloads.length&&a.allowDownload===false?'title="지금은 내려받을 수 없어요"':''}>다운로드</button></div>
     <span class="stamp" aria-hidden="true">${a.status==='soon'?'아직 봉인 중':a.private?'비공개 · 열람만':'봉인을 뜯어 보세요'}</span>
   </div></article>`).join('');
   $$('.file',grid).forEach(bindCard);
@@ -108,15 +119,16 @@ function revealCards(){
 function bindCard(card){
   const app=APPS.find(a=>a.slug===card.dataset.slug); const photo=$('.photo',card), lens=$('.lens',card), lensVis=$('.vis',lens);
   if(fine&&!reduced){
-    card.addEventListener('pointermove',e=>{ if(card.classList.contains('soon'))return; const r=card.getBoundingClientRect(); const x=(e.clientX-r.left)/r.width, y=(e.clientY-r.top)/r.height;
+    card.addEventListener('pointerenter',()=>{ card._r=card.getBoundingClientRect(); });
+    card.addEventListener('pointermove',e=>{ if(card.classList.contains('soon'))return; const r=card._r||card.getBoundingClientRect(); const x=(e.clientX-r.left)/r.width, y=(e.clientY-r.top)/r.height;
       card.style.setProperty('--rx',((y-.5)*-7).toFixed(2)+'deg'); card.style.setProperty('--ry',((x-.5)*9).toFixed(2)+'deg'); card.classList.add('tilt'); });
     card.addEventListener('pointerleave',()=>{ card.style.setProperty('--rx','0deg'); card.style.setProperty('--ry','0deg'); card.classList.remove('tilt'); photo.classList.remove('zoom'); });
-    photo.addEventListener('pointerenter',()=>{ if(!card.classList.contains('soon')) photo.classList.add('zoom'); });
+    photo.addEventListener('pointerenter',()=>{ if(card.classList.contains('soon')) return; photo.classList.add('zoom'); const r=photo.getBoundingClientRect(); lensVis.style.width=r.width+'px'; lensVis.style.height=r.height+'px'; photo._r=r; });
     photo.addEventListener('pointerleave',()=>photo.classList.remove('zoom'));
-    photo.addEventListener('pointermove',e=>{ const r=photo.getBoundingClientRect(); const lx=e.clientX-r.left, ly=e.clientY-r.top; const Z=2.1; photo.style.setProperty('--lx',lx+'px'); photo.style.setProperty('--ly',ly+'px');
-      lensVis.style.width=r.width+'px'; lensVis.style.height=r.height+'px'; lensVis.style.transform=`translate(${55-lx*Z}px,${55-ly*Z}px) scale(${Z})`; });
+    photo.addEventListener('pointermove',e=>{ const r=photo._r||photo.getBoundingClientRect(); const lx=e.clientX-r.left, ly=e.clientY-r.top; const Z=2.1; photo.style.setProperty('--lx',lx+'px'); photo.style.setProperty('--ly',ly+'px');
+      lensVis.style.transform=`translate(${55-lx*Z}px,${55-ly*Z}px) scale(${Z})`; });
   }
-  $('.run',card).addEventListener('click',e=>{ e.stopPropagation(); ripple(e); if(app.cardButton==='works'){ e.preventDefault(); const r=e.currentTarget.getBoundingClientRect(); slam('WORKS',r.left+r.width/2,r.top-10); openGallery(app.slug); return; } runApp(app,e); });
+  $('.run',card).addEventListener('click',e=>{ e.stopPropagation(); ripple(e); if(app.cardButton==='works'&&validWorks(app).length){ e.preventDefault(); const r=e.currentTarget.getBoundingClientRect(); slam('WORKS',r.left+r.width/2,r.top-10); openGallery(app.slug); return; } runApp(app,e); });
   $('.run',card).addEventListener('keydown',e=>e.stopPropagation()); // Enter가 카드 열기로 새지 않게
   $('.dl',card).addEventListener('click',e=>{ e.stopPropagation(); ripple(e); app.private?privateNotice(e):downloadApp(app,e); });
   card.addEventListener('click',()=>{ if(!card.classList.contains('soon')) openCase(app.slug,card); else toast('아직 봉인이 마르지 않았습니다.'); });
@@ -166,8 +178,12 @@ function fillDossier(app){
   $('#dPhoto').innerHTML=visHTML(app);
   const acts=$('#dActs');
   if(app.private){ acts.innerHTML=`${runLink(app,'실행')}<button type="button" class="btn line">다운로드</button>`; $('.gold',acts).onclick=e=>{ripple(e);runApp(app,e)}; $$('.line',acts).forEach(b=>b.onclick=e=>{ripple(e);privateNotice(e)}); }
-  else { const dls=canDl(app)?(app.downloads||[]):[]; acts.innerHTML=`${runLink(app,app.run&&app.allowRun===false?'실행 · 지금은 닫혀 있어요':'실행 · 새 탭에서 열기')}${dls.map((d,i)=>`<button type="button" class="btn line" data-i="${i}">↓ ${esc(d.label)}${d.size?` <small>(${esc(d.size)})</small>`:''}</button>`).join('')}${app.downloads&&app.downloads.length&&app.allowDownload===false?'<span class="alt">다운로드는 지금 닫혀 있어요.</span>':''}`;
-  $('.gold',acts).onclick=e=>{ripple(e);runApp(app,e)}; $$('.line',acts).forEach(b=>b.onclick=e=>{ripple(e);downloadApp(app,e)}); }
+  else { const dls=canDl(app)?(app.downloads||[]):[];
+    /* cardButton:"works"(카드소설 제작소)는 상세에서도 「작품 보기」가 주 버튼. 도구 자체는 그 옆 선 버튼으로 연다 */
+    const primary=app.cardButton==='works'&&validWorks(app).length?`<a class="btn gold works-btn" href="/project/${esc(app.slug)}/works" role="button">작품 보기 · ${validWorks(app).length}편</a>${canRun(app)?`<a class="btn line" href="${esc(app.run.url)}" target="_blank" rel="noopener">${esc(app.name)} 열기 · 새 탭</a>`:''}`:runLink(app,app.run&&app.allowRun===false?'실행 · 지금은 닫혀 있어요':'실행 · 새 탭에서 열기');
+    acts.innerHTML=`${primary}${dls.map((d,i)=>`<button type="button" class="btn line" data-i="${i}">↓ ${esc(d.label)}${d.size?` <small>(${esc(d.size)})</small>`:''}</button>`).join('')}${app.downloads&&app.downloads.length&&app.allowDownload===false?'<span class="alt">다운로드는 지금 닫혀 있어요.</span>':''}`;
+  const wb=$('.works-btn',acts); if(wb){ wb.onclick=e=>{ e.preventDefault(); ripple(e); const r=e.currentTarget.getBoundingClientRect(); slam('WORKS',r.left+r.width/2,r.top-10); openGallery(app.slug); }; } else $('.gold',acts).onclick=e=>{ripple(e);runApp(app,e)};
+  $$('button.line',acts).forEach(b=>b.onclick=e=>{ripple(e);downloadApp(app,e)}); $$('a.line',acts).forEach(b=>b.onclick=e=>{ripple(e); const r=e.currentTarget.getBoundingClientRect(); slam('OPEN',r.left+r.width/2,r.top-10);}); }
   $('#dAlt').innerHTML=app.altRun?`다른 버전: <a href="${esc(app.altRun.url)}" target="_blank" rel="noopener">${esc(app.altRun.label)}</a>`:'';
   $('#dAlt').hidden=!app.altRun;
   const n=$('#dNotice'); n.hidden=!app.notice; $('span',n).textContent=app.notice||'';
@@ -258,19 +274,31 @@ function closeViewer(){ if(viewer.hidden)return; viewer.classList.remove('on'); 
 function vStep(dir){ if(!V||V.busy)return; const n=V.i+dir, len=V.work.cards.length; if(n<0)return; if(!$('#vEnd').hidden){ if(dir<0){ $('#vEnd').hidden=true; } else return; }
   if(n>=len){ $('#vEnd').hidden=false; return; }
   V.busy=true; $('#vHint').classList.add('off');
-  if(dir>0){ const out=$('.v-card.cur',vStage); V.i=n; buildStack(false); const cur=$('.v-card.cur',vStage); cur.classList.add('in'); if(out){ out.classList.remove('cur'); out.classList.add('out'); vStage.appendChild(out); setTimeout(()=>out.remove(),640); } }
+  if(dir>0){ const out=$('.v-card.cur',vStage); V.i=n; buildStack(false); const cur=$('.v-card.cur',vStage); cur.classList.add('in'); if(out){ out.classList.remove('cur'); out.classList.add('out'); vStage.appendChild(out); setTimeout(()=>out.remove(),460); } }
   else { V.i=n; buildStack(false); const cur=$('.v-card.cur',vStage); cur.classList.add('back'); }
-  setTimeout(()=>{ V.busy=false; },reduced?0:620); }
+  setTimeout(()=>{ V.busy=false; },reduced?0:440); }
 $('#vNext').addEventListener('click',()=>vStep(1)); $('#vPrev').addEventListener('click',()=>vStep(-1));
 $('#vX').addEventListener('click',closeViewer); $('#vClose2').addEventListener('click',closeViewer);
 $('#vAgain').addEventListener('click',()=>{ if(!V)return; $('#vEnd').hidden=true; V.i=0; buildStack(true); });
-/* 탭·스와이프 */
-(function(){ let sx=0, sy=0, t0=0, active=false;
-  vStage.addEventListener('pointerdown',e=>{ sx=e.clientX; sy=e.clientY; t0=Date.now(); active=true; });
-  vStage.addEventListener('pointerup',e=>{ if(!active)return; active=false; const dx=e.clientX-sx, dy=e.clientY-sy, dt=Date.now()-t0;
-    if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)*1.2){ vStep(dx<0?1:-1); return; }
-    if(Math.abs(dx)<8&&Math.abs(dy)<8&&dt<400){ const r=vStage.getBoundingClientRect(); vStep((e.clientX-r.left)<r.width*.3?-1:1); } });
-  vStage.addEventListener('pointercancel',()=>{active=false;});
+/* 탭·스와이프 — 카드가 손가락을 따라오고, 놓으면 넘어가거나 제자리로 돌아온다 */
+(function(){ let sx=0, sy=0, t0=0, id=null, dragging=false, dx=0, prevEl=null, moved=false;
+  const cur=()=>$('.v-card.cur',vStage);
+  const prevCard=()=>{ if(!V||V.i===0) return null; const el=cardEl(V.work.cards[V.i-1],'prev'); el.style.transform='translateY(-50%) translateX(-115%) rotate(-8deg)'; vStage.appendChild(el); return el; };
+  vStage.addEventListener('pointerdown',e=>{ if(!V||V.busy||!$('#vEnd').hidden) return; sx=e.clientX; sy=e.clientY; t0=Date.now(); id=e.pointerId; dragging=true; moved=false; dx=0; try{ vStage.setPointerCapture(id); }catch(x){} const c=cur(); if(c){ c.classList.add('drag'); } });
+  vStage.addEventListener('pointermove',e=>{ if(!dragging||e.pointerId!==id) return; dx=e.clientX-sx; const dy=e.clientY-sy; if(!moved&&Math.abs(dx)<6&&Math.abs(dy)<6) return; moved=true; const c=cur(); if(!c) return;
+    if(dx<0){ if(prevEl){ prevEl.remove(); prevEl=null; } c.style.transform=`translateY(-50%) translateX(${dx}px) rotate(${(dx*0.035).toFixed(2)}deg)`; c.style.opacity=String(Math.max(.35,1+dx/900)); }
+    else { c.style.transform='translateY(-50%)'; c.style.opacity='1'; if(V.i>0){ if(!prevEl) prevEl=prevCard(); const k=Math.min(1,dx/260); prevEl.style.transform=`translateY(-50%) translateX(${-115+115*k}%) rotate(${-8+8*k}deg)`; } else { c.style.transform=`translateY(-50%) translateX(${Math.min(60,dx*.25)}px)`; } } });
+  const release=e=>{ if(!dragging||(e&&e.pointerId!==id)) return; dragging=false; const c=cur(); const dt=Date.now()-t0; const vx=Math.abs(dx)/Math.max(1,dt);
+    const w=vStage.getBoundingClientRect().width; const go=Math.abs(dx)>Math.min(90,w*.22)||(Math.abs(dx)>30&&vx>.45);
+    if(!moved){ if(c){ c.classList.remove('drag'); c.style.transform=''; c.style.opacity=''; } if(prevEl){ prevEl.remove(); prevEl=null; }
+      if(dt<400&&e){ const r=vStage.getBoundingClientRect(); vStep((e.clientX-r.left)<r.width*.4?-1:1); } return; }
+    if(go&&dx<0){ /* 다음: 현재 카드를 밀어낸 방향으로 날려 보낸다 */ V.busy=true; c.classList.remove('drag'); c.classList.add('fling'); c.style.transform=`translateY(-50%) translateX(${-w*1.1}px) rotate(-14deg)`; c.style.opacity='0';
+      setTimeout(()=>{ const n=V.i+1; if(n>=V.work.cards.length){ $('#vEnd').hidden=false; c.style.cssText=''; c.classList.remove('fling'); } else { V.i=n; buildStack(false); } V.busy=false; },260); }
+    else if(go&&dx>0&&prevEl){ /* 이전: 왼쪽에서 오던 카드를 끝까지 끌어온다 */ V.busy=true; prevEl.classList.add('fling'); prevEl.style.transform='translateY(-50%)'; if(c){ c.classList.remove('drag'); c.style.transform=''; c.style.opacity=''; }
+      setTimeout(()=>{ prevEl&&prevEl.remove(); prevEl=null; V.i=V.i-1; buildStack(false); V.busy=false; },240); }
+    else { /* 제자리로 */ if(c){ c.classList.remove('drag'); c.classList.add('snap'); c.style.transform=''; c.style.opacity=''; setTimeout(()=>c.classList.remove('snap'),320); } if(prevEl){ const pe=prevEl; prevEl=null; pe.classList.add('fling'); pe.style.transform='translateY(-50%) translateX(-115%) rotate(-8deg)'; setTimeout(()=>pe.remove(),300); } }
+    $('#vHint').classList.add('off'); };
+  vStage.addEventListener('pointerup',release); vStage.addEventListener('pointercancel',release); vStage.addEventListener('lostpointercapture',()=>{ if(dragging) release(null); });
 })();
 $('#vEnd').addEventListener('click',e=>{ if(e.target===$('#vEnd')) closeViewer(); });
 
@@ -324,8 +352,12 @@ function shelfOrder(list){
 }
 async function boot(){
   try{
-    const r=await fetch('/data/apps.json',{cache:'no-cache'}); if(!r.ok) throw new Error(r.status);
-    const data=await r.json(); SITE=data.site||{}; APPS=shelfOrder(data.apps||[]);
+    const q=BUILD?'?v='+BUILD:'';
+    const [r,ro]=await Promise.all([fetch('/data/apps.json'+q,{cache:'no-cache'}),fetch('/data/overrides.json'+q,{cache:'no-cache'}).catch(()=>null)]); if(!r.ok) throw new Error(r.status);
+    const data=await r.json(); let ov={}; try{ if(ro&&ro.ok){ const oj=await ro.json(); ov=(oj&&oj.apps)||{}; } }catch(e){}
+    /* data/overrides.json(관리 화면이 쓰는 파일)이 apps.json(코드와 함께 배포되는 기본값) 위에 덮인다 — 새 버전을 올려도 올린 작품·고친 글이 남는 이유 */
+    const OVK=['works','summary','notice','story','pin','allowRun','allowDownload','private'];
+    SITE=data.site||{}; APPS=shelfOrder((data.apps||[]).map(a=>{ const o=ov[a.slug]; if(!o||typeof o!=='object') return a; const m={...a}; for(const k of OVK) if(k in o) m[k]=o[k]; return m; }));
   }catch(e){
     grid.innerHTML='<div class="loading err">앱 목록(data/apps.json)을 읽지 못했습니다.<br>파일을 직접 열면(file://) 읽을 수 없어요 — 저장소 폴더에서 <code>npx serve -s .</code> 로 띄운 뒤 열어 주세요.</div>';
     return;

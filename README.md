@@ -13,12 +13,14 @@ doguri-studio/
 ├─ admin.html + assets/js/admin.js   관리 화면 (/admin)
 ├─ api/admin.js            관리 화면의 서버 쪽 (Vercel 함수) — 로그인 검사 · GitHub 커밋 대행
 ├─ robots.txt, sitemap.xml
+├─ tools/stamp.py           배포 전 캐시 스탬프(?v=) 갱신 · tools/make-zip.sh  배포 zip(관리 화면 소유 파일 제외)
 ├─ assets/
 │  ├─ css/site.css         디자인 토큰 + 모든 스타일
 │  ├─ js/site.js           apps.json 읽기 · 카드 · 필터 · 상세 전환 · 효과
 │  └─ img/                 favicon.svg, og.jpg(링크 공유 미리보기)
 ├─ data/
-│  └─ apps.json            ★ 앱 목록. 여기만 고치면 카드가 바뀜
+│  ├─ apps.json            ★ 앱 목록 기본값(코드와 함께 배포)
+│  └─ overrides.json       관리 화면이 쓰는 덮어쓰기(작품집·소개·고정·공개 설정) — zip에 안 들어감
 ├─ content/
 │  └─ <slug>.md            앱별 「이 이야기의 시작」(마크다운)
 ├─ media/
@@ -137,6 +139,23 @@ A(비밀번호)만 넣어도 되고, B(구글)만 넣어도 되고, 둘 다 넣�
 
 로그인하면 12시간짜리 세션이 그 브라우저에 남는다(`localStorage`의 `dgr-admin-session`). **나가기**를 누르면 지워진다. 비밀번호를 바꾸거나 토큰을 바꾸면 기존 세션은 모두 무효가 된다.
 
+## 두 종류의 파일 — 새 버전을 올려도 올린 작품이 사라지지 않는 이유
+
+| 누가 관리 | 파일 | 새 버전 zip에 |
+|---|---|---|
+| 코드(Claude가 zip으로 전달) | `index.html`, `assets/`, `api/`, `apps/`, `data/apps.json`(앱 기본값), `media/<앱>/`의 썸네일·스크린샷 | **들어 있음** — 덮어쓰면 됨 |
+| 내용(관리 화면 `/admin`이 커밋) | `data/overrides.json`(작품집·소개·속삭임·고정·공개 설정), `content/<앱>.md`(이야기 글), `media/<앱>/works/`(올린 카드) | **없음** — 덮어써도 그대로 남음 |
+
+사이트는 `apps.json` 위에 `overrides.json`을 덮어서 보여 주고, 관리 화면은 `overrides.json`·`content/`·`works/`만 쓴다. 그래서 zip을 통째로 덮어써도 관리 화면에서 한 일은 보존된다. (2026-09-08 이전 zip은 `apps.json`을 직접 고쳐 썼기 때문에 새 zip이 덮어쓰면 사라졌다 — 그 문제를 이렇게 갈랐다.) zip은 `tools/make-zip.sh`로 만들며 위 제외 규칙이 들어 있다. 새 앱을 추가할 때 그 앱의 첫 이야기 글만 `content/<새앱>.md`로 따로 넣는다.
+
+## 배포 전 한 번: 빌드 스탬프
+
+```bash
+python3 tools/stamp.py
+```
+
+`index.html`·`admin.html`이 부르는 `site.css?v=…`, `site.js?v=…`, `admin.js?v=…`의 `v=`를 지금 시각으로 바꾼다(site.js는 그 값을 `/data/apps.json?v=…`에도 붙인다). HTML은 항상 새로 받아지므로, 폰·PC 어느 브라우저가 옛 CSS/JS를 캐시에 쥐고 있어도 **배포 즉시 새 파일**을 받는다. Claude가 zip을 만들 때 자동으로 돌리지만, 직접 CSS/JS를 고쳐 올릴 때도 한 번 돌리면 "폰에서만 옛 화면" 같은 일이 없다. (PC와 모바일은 같은 파일 한 벌이다 — 따로 있는 모바일 페이지는 없다.)
+
 ## 로컬에서 보기
 
 `index.html`을 파일로 직접 열면(`file://`) JSON·마크다운을 읽지 못한다. 저장소 폴더에서:
@@ -163,7 +182,7 @@ npx serve -s .
 - 탐정게임 — 지금은 `private: true`로 비공개(실행·다운로드 누르면 "비공개입니다"). 공개할 때 `apps/nooneleft/README.md` 참고
 - 아침 책상 — 지금은 claude.ai 아티팩트로 연결(external). 공개 API로 갱신을 다시 만들면 `apps/morning-desk/`에 넣고 hosted로 전환
 - 스크린샷은 사이트 안 앱을 그대로 찍은 것. 더 좋은 장면이 있으면 `media/<slug>/`의 파일만 바꾸면 됨
-- 약속네컷은 파일을 이 저장소에 두지 않는다. 실행은 GitHub Pages(`doguri25.github.io/yaksoknekut`), 다운로드는 그 저장소의 Releases·docs 링크라 새 버전을 올려도 사이트는 손댈 게 없다. 스크린샷은 학교 이름을 가린 연출 캡처(`media/yaksok-necut/`)
+- 약속네컷은 파일을 이 저장소에 두지 않는다. 실행은 브라우저 버전 주소, 다운로드는 배포 저장소의 파일 링크라 새 버전을 올려도 사이트는 손댈 게 없다(사이트 화면에는 저장소 이름·링크를 표시하지 않기로 함, 2026-09-08). 스크린샷은 학교 이름을 가린 연출 캡처(`media/yaksok-necut/`)
 - 삼국피구(`apps/samguk-dodgeball/`)는 게임 HTML(10.7.3)과 설명서(`manual.md`)를 그대로 둔 것. 새 버전이 나오면 `index.html`만 바꾸고 `data/apps.json`의 downloads 라벨·용량과 `content/samguk-dodgeball.md`의 버전 언급을 맞추면 된다
 
 ## 인트로·효과에 대해
@@ -171,6 +190,8 @@ npx serve -s .
 - 봉인 편지 인트로는 브라우저에 `dgr-intro-seen`을 남겨 **처음 한 번만** 나온다. 다시 보려면 개발자 도구에서 localStorage를 지우거나 시크릿 창으로 연다.
 - 「움직임 줄이기」를 켠 기기에서는 인트로·입자·안개·틸트가 모두 꺼진다.
 - 오버레이(상세·갤러리·뷰어·소개)가 열릴 때 `body`를 `overflow:hidden`으로 잠그는데, `html{scrollbar-gutter:stable}`로 스크롤바 자리를 항상 남겨 두어 화면 폭이 들썩이지 않는다(옛 브라우저는 JS가 `--sbw`를 재서 padding으로 보정).
+- 카드 뷰어는 손가락(마우스)을 따라 카드가 움직이고, 폭의 22%(최대 90px)를 넘기거나 빠르게 튕기면 넘어가며, 못 미치면 제자리로 돌아온다. 오른쪽으로 끌면 이전 카드가 왼쪽에서 따라 들어온다. 탭은 오른쪽 60% = 다음, 왼쪽 40% = 이전.
+- 효과 성능 원칙(2026-09-08 PC 끊김 보고 후): 화면 전체 레이어에 `mix-blend-mode`를 쓰지 않는다(grain·torch), 촛불은 1000px 원을 `transform`으로만 옮긴다, 포인터 처리는 rAF에 묶고 레이아웃 읽기(getBoundingClientRect)는 진입 시 한 번만, 먼지 캔버스는 DPR 1·30fps이고 오버레이(`body.lock`)가 덮이면 먼지·촛불·안개 애니메이션을 멈춘다(backdrop-filter가 매 프레임 다시 흐려지는 걸 막음), 월광경(.lens)은 left/top 대신 transform.
 - 상단 헤더는 스크롤 중 **높이를 바꾸지 않는다**(compact는 배경·블러·브랜드 축소만). 높이를 바꾸면 문서 길이→scrollY→compact 토글이 서로 물고 흔들리는 버그가 생긴다(2026-09-08 수정). 전환 기준도 내려갈 때 64px·올라올 때 16px로 두었다.
 - 서체는 Google Fonts(Nanum Myeongjo, Noto Sans KR, IBM Plex Mono — OFL)에서 불러온다. IBM Plex Mono는 영문·숫자 라벨(No. 01, SEALED, 날짜)에만 쓰고, 한글이 섞이는 글은 전부 Noto Sans KR(`--label`)이다.
 - `assets/`·`data/`는 브라우저가 매번 서버에 새 버전을 묻도록(`max-age=0, must-revalidate`) 해 두었다. 배포 뒤에도 옛 화면이 보이면 한 번만 강력 새로고침(Ctrl+F5 / 모바일은 탭 닫고 다시 열기)하면 된다.

@@ -1,6 +1,6 @@
 /* 도구리 작업실 — admin.js
    브라우저는 /api/admin 하고만 이야기한다. GitHub 토큰은 Vercel 환경변수에만 있고 여기엔 없다.
-   흐름: 로그인(구글 또는 비밀번호) → 세션 토큰(12시간, localStorage) → apps.json 읽기 → 작품 편집/새 작품
+   흐름: 로그인(구글 또는 비밀번호) → 세션 토큰(12시간, localStorage) → apps.json+overrides.json 읽기 → 작품 편집/새 작품
         → 이미지 축소 → 블롭 업로드(장당 1요청) → 커밋 1개 → Vercel 자동 배포 → 사이트에서 확인 */
 (() => {
 'use strict';
@@ -20,7 +20,24 @@ async function api(op,body,opts={}){
   if(!r.ok){ if(r.status===401&&SESSION&&!opts.noAuth){ logout('세션이 끝났어요. 다시 들어와 주세요.'); } throw new Error(j.error||`${r.status} ${r.statusText}`); }
   return j;
 }
-async function readAppsJson(){ const j=await api('apps',{}); APPSJSON=JSON.parse(j.text); }
+/* 기본값(apps.json, 코드와 함께 배포)과 덮어쓰기(overrides.json, 관리 화면이 소유)를 읽어 합친다.
+   관리 화면은 언제나 overrides.json 만 쓴다 — 새 버전 zip을 덮어써도 올린 작품·고친 글이 남는 이유 */
+let BASE=null, OV={apps:{}};
+const OVK=['works','summary','notice','story','pin','allowRun','allowDownload','private'];
+async function readAppsJson(){
+  const [b,o]=await Promise.all([api('file',{path:'data/apps.json'}),api('file',{path:'data/overrides.json'})]);
+  BASE=JSON.parse(b.text); try{ OV=o.missing||!o.text?{apps:{}}:JSON.parse(o.text); }catch(e){ OV={apps:{}}; } if(!OV.apps||typeof OV.apps!=='object') OV.apps={};
+  APPSJSON=JSON.parse(JSON.stringify(BASE)); APPSJSON.apps.forEach(a=>{ const ov=OV.apps[a.slug]; if(ov&&typeof ov==='object') for(const k of OVK) if(k in ov) a[k]=ov[k]; });
+}
+/* 지금 APPSJSON(합친 상태)에서 편집 가능한 항목만 골라 overrides.json 본문을 만든다 — 기본값과 다르거나 이미 덮어쓰기가 있던 앱만 */
+function ovText(){
+  const pick=a=>{ const o={}; for(const k of OVK){ if(k==='works'){ if(Array.isArray(a.works)) o.works=a.works; } else if(a[k]!==undefined) o[k]=a[k]; } return o; };
+  const out={_readme:OV._readme||'관리 화면(/admin)이 쓰는 파일. 여기 있는 값이 data/apps.json 위에 덮입니다. 새 버전 zip에는 이 파일이 들어 있지 않으니 덮어써도 사라지지 않아요.',apps:{}};
+  for(const a of APPSJSON.apps){ const base=BASE.apps.find(b=>b.slug===a.slug)||{}; const mine=pick(a), theirs=pick(base);
+    if(OV.apps[a.slug]||JSON.stringify(mine)!==JSON.stringify(theirs)) out.apps[a.slug]=mine; }
+  return JSON.stringify(out,null,2)+'\n';
+}
+const OVFILE=()=>({path:'data/overrides.json',text:ovText()});
 /* 파일 여러 개 + apps.json 을 커밋 하나로: 이미지는 장당 블롭 1요청, 나머지는 서버가 트리·커밋 처리 */
 async function commitFiles(message, files /* [{path, base64|text}] */, deletions /* [path] */, onProgress){
   const out=[]; let done=0; const imgs=files.filter(f=>f.base64);
@@ -178,7 +195,7 @@ $('#btnSaveWorks').addEventListener('click',async()=>{
   const btn=$('#btnSaveWorks'); btn.disabled=true; st($('#stWorks'),'게시하는 중…');
   try{
     const deletions=[...DELFILES]; for(const d of DELETED){ for(const c of d.cards){ if(c.startsWith('/media/')) deletions.push(c.slice(1)); } }
-    const files=ADDS.map(x=>({path:x.path,base64:x.base64})); files.push({path:'data/apps.json',text:JSON.stringify(APPSJSON,null,2)+'\n'});
+    const files=ADDS.map(x=>({path:x.path,base64:x.base64})); files.push(OVFILE());
     await commitFiles(`작품집 정리 (${app().name})`,files,[...new Set(deletions)],(d,n)=>st($('#stWorks'),`카드 올리는 중 ${d}/${n}…`));
     discardWorks(); await readAppsJson(); renderWorks(); st($('#stWorks'),'게시했습니다. 약 1분 뒤 사이트에 반영돼요.','ok');
   }catch(e){ st($('#stWorks'),'실패: '+e.message,'err'); btn.disabled=false; }
@@ -234,12 +251,12 @@ $('#btnPublish').addEventListener('click',async()=>{
     for(let i=0;i<NEW.length;i++){ const r=await shrink(NEW[i].file); const name=`${String(i+1).padStart(2,'0')}.${r.ext}`; const path=`media/${a.slug}/works/${slug}/${name}`; files.push({path,base64:r.base64}); paths.push('/'+path); log(`  ${name}  ${r.w}×${r.h}  ${(r.size/1024).toFixed(0)} KB`); fill.style.width=(2+30*(i+1)/NEW.length)+'%'; }
     await readAppsJson(); // 최신 상태 위에 얹기
     const cur=app(); cur.works=cur.works||[]; cur.works.unshift({slug,title,date,ratio,blurb,cards:paths}); // 최신 작품이 맨 앞 — 상세에는 앞의 넷만 보인다
-    files.push({path:'data/apps.json',text:JSON.stringify(APPSJSON,null,2)+'\n'});
+    files.push(OVFILE());
     log('저장소에 올리는 중…');
     const sha=await commitFiles(`작품 추가: ${title} (${a.name})`,files,[],(d,n,p)=>{ fill.style.width=(32+60*d/n)+'%'; log(`  올림 ${d}/${n}`); });
     log(`커밋 완료 ${sha.slice(0,7)} · Vercel이 배포하는 중 (보통 30초~1분)`); fill.style.width='94%';
     // 사이트에 반영됐는지 확인
-    let seen=false; for(let k=0;k<24&&!seen;k++){ await new Promise(r=>setTimeout(r,8000)); try{ const j=await (await fetch('/data/apps.json?_='+Date.now(),{cache:'no-store'})).json(); seen=!!(j.apps.find(x=>x.slug===a.slug)?.works||[]).find(w=>w.slug===slug); }catch(e){} log(seen?'사이트에 반영됐습니다.':`  아직 배포 중… (${(k+1)*8}초)`); }
+    let seen=false; for(let k=0;k<24&&!seen;k++){ await new Promise(r=>setTimeout(r,8000)); try{ const j=await (await fetch('/data/overrides.json?_='+Date.now(),{cache:'no-store'})).json(); seen=!!((j.apps||{})[a.slug]?.works||[]).find(w=>w.slug===slug); }catch(e){} log(seen?'사이트에 반영됐습니다.':`  아직 배포 중… (${(k+1)*8}초)`); }
     fill.style.width='100%';
     $('#done').hidden=false; $('#done').innerHTML=seen?`게시 완료! <a href="/project/${esc(a.slug)}" target="_blank" rel="noopener">${esc(a.name)} 상세에서 보기 →</a>`:`저장소에는 올라갔습니다. 배포가 조금 더 걸리는 것 같아요 — 1~2분 뒤 <a href="/project/${esc(a.slug)}" target="_blank" rel="noopener">${esc(a.name)} 상세</a>를 열어 확인해 주세요.`;
     NEW.forEach(c=>URL.revokeObjectURL(c.url)); NEW=[]; renderCards(); $('#wTitle').value=''; $('#wBlurb').value=''; $('#wSlug').value=''; DIRTY=false; renderWorks();
@@ -272,10 +289,10 @@ $('#btnSaveText').addEventListener('click',async()=>{
   const summary=$('#tSummary').value.trim(), notice=$('#tNotice').value.trim(), story=$('#tStory').value.replace(/\r/g,'');
   try{
     await readAppsJson(); const a=tApp(); if(!a) throw new Error('앱을 찾지 못했습니다');
-    a.summary=summary; a.notice=notice; const fl=tFlags(); a.allowRun=fl.allowRun; a.allowDownload=fl.allowDownload; if(fl.private) a.private=true; else delete a.private; const sp=storyPath(a); const files=[];
-    if(story.trim()){ a.story='/'+sp; files.push({path:sp,text:story.replace(/\s+$/,'')+'\n'}); }
+    a.summary=summary; a.notice=notice; const fl=tFlags(); a.allowRun=fl.allowRun; a.allowDownload=fl.allowDownload; a.private=!!fl.private; /* false도 명시해야 기본값(private:true)을 덮을 수 있다 */ const sp=storyPath(a); const files=[];
+    if(story.trim()){ a.story='/'+sp; if(story!==(TORIG&&TORIG.story)||TNOTE) files.push({path:sp,text:story.replace(/\s+$/,'')+'\n'}); /* 글이 바뀌었거나 파일이 없을 때만 md를 쓴다 */ }
     else if(TORIG&&TORIG.story.trim()){ /* 글을 다 지웠으면 파일은 두고 연결만 끊는다 */ a.story=null; }
-    files.push({path:'data/apps.json',text:JSON.stringify(APPSJSON,null,2)+'\n'});
+    files.push(OVFILE());
     await commitFiles(`소개 글·공개 설정 수정: ${a.name}`,files,[]);
     TORIG={summary,notice,story,...tFlags()}; TNOTE=''; $('#tSummary').value=summary; $('#tNotice').value=notice;
     st($('#stText'),'게시했습니다. 약 1분 뒤 사이트에 반영돼요. (상세 화면을 다시 열면 보입니다)','ok'); buildAppSel(); renderWorks();
@@ -310,7 +327,7 @@ $('#btnSaveOrder').addEventListener('click',async()=>{
   if(DIRTY){ st($('#stOrder'),'작품집에 게시하지 않은 변경이 있어요. 02의 「변경 사항 게시」를 먼저 눌러 주세요.','err'); return; }
   const btn=$('#btnSaveOrder'); btn.disabled=true; st($('#stOrder'),'게시하는 중…');
   try{ const pins={...OPINS}; await readAppsJson(); APPSJSON.apps.forEach(a=>{ a.pin=pins[a.slug]||null; });
-    await commitFiles('서가 순서 변경',[{path:'data/apps.json',text:JSON.stringify(APPSJSON,null,2)+'\n'}],[]);
+    await commitFiles('서가 순서 변경',[OVFILE()],[]);
     renderOrder(true); st($('#stOrder'),'게시했습니다. 약 1분 뒤 서가 순서가 바뀝니다.','ok'); }
   catch(e){ st($('#stOrder'),'실패: '+e.message,'err'); btn.disabled=false; }
 });

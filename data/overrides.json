@@ -1,0 +1,62 @@
+{
+  "_readme": "관리 화면(/admin)이 쓰는 파일. 여기 있는 값이 data/apps.json 위에 덮입니다(작품집·소개·속삭임·이야기 경로·고정·실행/다운로드 허용·비공개). 새 버전 zip에는 이 파일이 들어 있지 않으니 덮어써도 사라지지 않아요.",
+  "apps": {
+    "card-novel": {
+      "works": [
+        {
+          "slug": "w20260909-fotn",
+          "title": "주파수 72.4",
+          "date": "2026.09",
+          "ratio": "3:4",
+          "blurb": "망상과 현실 사이",
+          "cards": [
+            "/media/card-novel/works/w20260909-fotn/01.webp",
+            "/media/card-novel/works/w20260909-fotn/02.webp",
+            "/media/card-novel/works/w20260909-fotn/03.webp",
+            "/media/card-novel/works/w20260909-fotn/04.webp",
+            "/media/card-novel/works/w20260909-fotn/05.webp",
+            "/media/card-novel/works/w20260909-fotn/06.webp",
+            "/media/card-novel/works/w20260909-fotn/08.webp",
+            "/media/card-novel/works/w20260909-fotn/09.webp",
+            "/media/card-novel/works/w20260909-fotn/07.webp",
+            "/media/card-novel/works/w20260909-fotn/10.webp",
+            "/media/card-novel/works/w20260909-fotn/11.webp",
+            "/media/card-novel/works/w20260909-fotn/12.webp",
+            "/media/card-novel/works/w20260909-fotn/13.webp",
+            "/media/card-novel/works/w20260909-fotn/14.webp",
+            "/media/card-novel/works/w20260909-fotn/15.webp",
+            "/media/card-novel/works/w20260909-fotn/16.webp",
+            "/media/card-novel/works/w20260909-fotn/17.webp",
+            "/media/card-novel/works/w20260909-fotn/18.webp",
+            "/media/card-novel/works/w20260909-fotn/19.webp",
+            "/media/card-novel/works/w20260909-fotn/20.webp"
+          ]
+        },
+        {
+          "slug": "dry-umbrella",
+          "title": "젖지 않은 우산",
+          "date": "2026.09",
+          "ratio": "1:1",
+          "blurb": "비 오는 밤, 우산꽂이에 우산이 하나 남았다. 3분 미스터리",
+          "cards": [
+            "/media/card-novel/works/dry-umbrella/01.webp",
+            "/media/card-novel/works/dry-umbrella/02.webp",
+            "/media/card-novel/works/dry-umbrella/03.webp",
+            "/media/card-novel/works/dry-umbrella/04.webp",
+            "/media/card-novel/works/dry-umbrella/05.webp",
+            "/media/card-novel/works/dry-umbrella/06.webp",
+            "/media/card-novel/works/dry-umbrella/07.webp",
+            "/media/card-novel/works/dry-umbrella/08.webp",
+            "/media/card-novel/works/dry-umbrella/09.webp",
+            "/media/card-novel/works/dry-umbrella/10.webp",
+            "/media/card-novel/works/dry-umbrella/11.webp"
+          ]
+        }
+      ]
+    },
+    "yaksok-necut": {
+      "allowRun": false,
+      "allowDownload": false
+    }
+  }
+}
