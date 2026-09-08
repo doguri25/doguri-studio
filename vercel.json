@@ -5,6 +5,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/project/:slug/works",
+      "destination": "/index.html"
+    },
+    {
       "source": "/about",
       "destination": "/index.html"
     },

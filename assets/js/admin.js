@@ -233,7 +233,7 @@ $('#btnPublish').addEventListener('click',async()=>{
     const files=[]; const paths=[];
     for(let i=0;i<NEW.length;i++){ const r=await shrink(NEW[i].file); const name=`${String(i+1).padStart(2,'0')}.${r.ext}`; const path=`media/${a.slug}/works/${slug}/${name}`; files.push({path,base64:r.base64}); paths.push('/'+path); log(`  ${name}  ${r.w}×${r.h}  ${(r.size/1024).toFixed(0)} KB`); fill.style.width=(2+30*(i+1)/NEW.length)+'%'; }
     await readAppsJson(); // 최신 상태 위에 얹기
-    const cur=app(); cur.works=cur.works||[]; cur.works.push({slug,title,date,ratio,blurb,cards:paths});
+    const cur=app(); cur.works=cur.works||[]; cur.works.unshift({slug,title,date,ratio,blurb,cards:paths}); // 최신 작품이 맨 앞 — 상세에는 앞의 넷만 보인다
     files.push({path:'data/apps.json',text:JSON.stringify(APPSJSON,null,2)+'\n'});
     log('저장소에 올리는 중…');
     const sha=await commitFiles(`작품 추가: ${title} (${a.name})`,files,[],(d,n,p)=>{ fill.style.width=(32+60*d/n)+'%'; log(`  올림 ${d}/${n}`); });

@@ -62,7 +62,7 @@ function renderCards(){
     <span class="tab">${a.status==='soon'?'UNWRITTEN':(a.private?'PRIVATE · ':'SEALED · ')+esc(a.num)}</span>
     <div class="photo"><i class="tape l"></i><i class="tape r"></i>${visHTML(a)}<div class="lens" aria-hidden="true">${visHTML(a)}</div></div>
     <div class="meta"><h3><span class="num">${esc(a.num)}</span>${esc(a.name)}</h3><p>${esc(a.summary)}</p><div class="tags">${a.tags.map(t=>`<span>${esc(t)}</span>`).join('')}</div></div>
-    <div class="acts">${runLink(a,'실행','run')}<button type="button" class="btn line dl" ${(a.downloads&&a.downloads.length)||a.private?'':'disabled'}>다운로드</button></div>
+    <div class="acts">${a.cardButton==='works'?`<a class="btn gold run" href="/project/${esc(a.slug)}/works" role="button">작품 보기</a>`:runLink(a,'실행','run')}<button type="button" class="btn line dl" ${(a.downloads&&a.downloads.length)||a.private?'':'disabled'}>다운로드</button></div>
     <span class="stamp" aria-hidden="true">${a.status==='soon'?'아직 봉인 중':a.private?'비공개 · 열람만':'봉인을 뜯어 보세요'}</span>
   </div></article>`).join('');
   $$('.file',grid).forEach(bindCard);
@@ -116,7 +116,7 @@ function bindCard(card){
     photo.addEventListener('pointermove',e=>{ const r=photo.getBoundingClientRect(); const lx=e.clientX-r.left, ly=e.clientY-r.top; const Z=2.1; photo.style.setProperty('--lx',lx+'px'); photo.style.setProperty('--ly',ly+'px');
       lensVis.style.width=r.width+'px'; lensVis.style.height=r.height+'px'; lensVis.style.transform=`translate(${55-lx*Z}px,${55-ly*Z}px) scale(${Z})`; });
   }
-  $('.run',card).addEventListener('click',e=>{ e.stopPropagation(); ripple(e); runApp(app,e); });
+  $('.run',card).addEventListener('click',e=>{ e.stopPropagation(); ripple(e); if(app.cardButton==='works'){ e.preventDefault(); const r=e.currentTarget.getBoundingClientRect(); slam('WORKS',r.left+r.width/2,r.top-10); openGallery(app.slug); return; } runApp(app,e); });
   $('.run',card).addEventListener('keydown',e=>e.stopPropagation()); // Enter가 카드 열기로 새지 않게
   $('.dl',card).addEventListener('click',e=>{ e.stopPropagation(); ripple(e); app.private?privateNotice(e):downloadApp(app,e); });
   card.addEventListener('click',()=>{ if(!card.classList.contains('soon')) openCase(app.slug,card); else toast('아직 봉인이 마르지 않았습니다.'); });
@@ -198,7 +198,7 @@ function closeCase(viaHistory=false){
   if(card&&!reduced&&!card.hidden){ const from=$('#dPhoto').getBoundingClientRect(); const to=$('.photo',card).getBoundingClientRect(); const g=document.createElement('div'); g.className='ghost'; g.innerHTML=visHTML(app);
     g.style.cssText=`left:${from.left}px;top:${from.top}px;width:${from.width}px;height:${from.height}px`; document.body.appendChild(g); dossier.classList.remove('ready');
     g.animate([{transform:'translate(0,0) scale(1,1)'},{transform:`translate(${to.left-from.left}px,${to.top-from.top}px) scale(${to.width/from.width},${to.height/from.height})`,opacity:.6}],{duration:460,easing:'cubic-bezier(.2,.8,.2,1)',fill:'forwards'}).onfinish=()=>g.remove(); }
-  dossier.classList.remove('on'); setTimeout(()=>{ dossier.hidden=true; dossier.classList.remove('ready'); document.body.classList.remove('lock'); if(card) card.focus({preventScroll:true}); },420);
+  dossier.classList.remove('on'); setTimeout(()=>{ dossier.hidden=true; dossier.classList.remove('ready'); if(gallery.hidden&&viewer.hidden) document.body.classList.remove('lock'); if(card) card.focus({preventScroll:true}); },420);
 }
 function step(dir){ const live=APPS.filter(a=>a.status!=='soon'); const i=live.findIndex(a=>a.slug===current.slug); const n=live[(i+dir+live.length)%live.length]; if(!n||n===current)return;
   dossier.classList.remove('ready'); current=null; setTimeout(()=>{ history.replaceState({view:'project',slug:n.slug},'','/project/'+encodeURIComponent(n.slug)); current=n; currentCard=cardOf(n.slug); fillDossier(n); dossier.scrollTo({top:0,behavior:reduced?'auto':'smooth'}); requestAnimationFrame(()=>dossier.classList.add('ready')); },60); }
@@ -208,12 +208,38 @@ $('#dPrev').addEventListener('click',()=>step(-1)); $('#dNext').addEventListener
 
 /* ═══════════════ 작품집 (카드 묶음) 과 카드 뷰어 ═══════════════ */
 function ratioWH(r){ const m=String(r||'1:1').split(':'); return {w:parseFloat(m[0])||1,h:parseFloat(m[1])||1}; }
+const WORKS_PREVIEW=4; // 상세에는 최근 넷만, 나머지는 「작품 모두 보기」(갤러리)
+const validWorks=app=>(app.works||[]).filter(w=>w&&w.cards&&w.cards.length);
+function workTile(w,i){ const r=ratioWH(w.ratio); return `<button type="button" class="work" data-i="${i}" style="--ar:${r.w}/${r.h}" aria-label="${esc(w.title)} 열어 보기"><div class="cover"><img src="${esc(w.cards[0])}" alt="" loading="lazy"><i></i></div><div class="cap"><b>${esc(w.title)}</b><span>${w.cards.length}장${w.date?' · '+esc(w.date):''}</span></div>${w.blurb?`<p class="blurb">${esc(w.blurb)}</p>`:''}</button>`; }
 function renderWorks(app){
-  const sec=$('#dWorksSec'), box=$('#dWorks'); const works=(app.works||[]).filter(w=>w&&w.cards&&w.cards.length);
+  const sec=$('#dWorksSec'), box=$('#dWorks'); const works=validWorks(app);
   sec.hidden=!works.length; if(!works.length){ box.innerHTML=''; return; }
-  box.innerHTML=works.map((w,i)=>{ const r=ratioWH(w.ratio); return `<button type="button" class="work" data-i="${i}" style="--ar:${r.w}/${r.h}" aria-label="${esc(w.title)} 열어 보기"><div class="cover"><img src="${esc(w.cards[0])}" alt="" loading="lazy"><i></i></div><div class="cap"><b>${esc(w.title)}</b><span>${w.cards.length}장${w.date?' · '+esc(w.date):''}</span></div>${w.blurb?`<p class="blurb">${esc(w.blurb)}</p>`:''}</button>`; }).join('');
-  $$('.work',box).forEach(el=>el.addEventListener('click',()=>openViewer(works[+el.dataset.i])));
+  const shown=works.slice(0,WORKS_PREVIEW), rest=works.length-shown.length; const ar=ratioWH((shown[0]||{}).ratio);
+  $('#dWorksN').textContent=works.length+'편'; const all=$('#dWorksAll'); all.hidden=!rest; all.onclick=()=>openGallery(app.slug);
+  box.innerHTML=shown.map(workTile).join('')+(rest?`<button type="button" class="work more" style="--ar:${ar.w}/${ar.h}" aria-label="작품 ${rest}편 더 보기"><div class="cover"><div><b>+${rest}</b><span>작품 모두 보기</span></div></div><div class="cap"><b>더보기</b><span>${works.length}편 전부</span></div></button>`:'');
+  $$('.work:not(.more)',box).forEach(el=>el.addEventListener('click',()=>openViewer(works[+el.dataset.i])));
+  const more=$('.work.more',box); if(more) more.addEventListener('click',()=>openGallery(app.slug));
 }
+/* ── 작품집 전체 (갤러리 오버레이) — /project/<slug>/works ── */
+const gallery=$('#gallery'); let galleryApp=null, galleryPushed=false;
+function openGallery(slug,push=true){
+  const app=APPS.find(a=>a.slug===slug); const works=app?validWorks(app):[]; if(!app||!works.length) return;
+  galleryApp=app; $('#gTitle').textContent=app.name+' · 작품집'; $('#gCount').textContent=String(works.length).padStart(2,'0')+' WORKS';
+  $('#gLead').textContent=works.length+'편의 작품이 있어요. 표지를 누르면 한 장씩 넘겨 읽을 수 있고, 최근 작품이 앞에 옵니다.';
+  $('#gWorks').innerHTML=works.map(workTile).join(''); $$('.work',$('#gWorks')).forEach(el=>el.addEventListener('click',()=>openViewer(works[+el.dataset.i])));
+  $('#gFoot').innerHTML=(app.run&&!app.private?`<a class="btn line" href="${esc(app.run.url)}" target="_blank" rel="noopener">${esc(app.name)} 열기 · 새 탭</a>`:'')+`<button type="button" class="btn line" id="gToStory">이 도구의 이야기 읽기</button><span>표지는 첫 장 · 뷰어에서 ← → 키나 옆으로 밀어서 넘기기</span>`;
+  $('#gToStory').onclick=()=>{ closeGallery(); if(!current||current.slug!==app.slug){ setTimeout(()=>openCase(app.slug,cardOf(app.slug)),80); } };
+  if(gallery.hidden){ gallery.hidden=false; gallery.scrollTop=0; document.body.classList.add('lock'); requestAnimationFrame(()=>{ gallery.classList.add('on'); setTimeout(()=>gallery.classList.add('ready'),80); }); }
+  if(push){ history.pushState({view:'works',slug},'','/project/'+encodeURIComponent(slug)+'/works'); galleryPushed=true; } else galleryPushed=false;
+  document.title=app.name+' 작품집 · '+SITE_NAME; $('#gBack').focus({preventScroll:true});
+}
+function closeGallery(viaHistory=false){
+  if(gallery.hidden) return; if(!viewer.hidden) closeViewer(); const app=galleryApp; galleryApp=null;
+  gallery.classList.remove('on'); setTimeout(()=>{ gallery.hidden=true; gallery.classList.remove('ready'); if(dossier.hidden&&about.hidden&&viewer.hidden) document.body.classList.remove('lock'); },400);
+  if(!viaHistory){ if(galleryPushed) history.back(); else history.replaceState(null,'',current?'/project/'+encodeURIComponent(current.slug):'/'); }
+  galleryPushed=false; document.title=current?current.name+' · '+SITE_NAME:SITE_NAME;
+}
+$('#gBack').addEventListener('click',()=>closeGallery()); gallery.addEventListener('click',e=>{ if(e.target===gallery) closeGallery(); });
 const viewer=$('#viewer'), vStage=$('#vStage'); let V=null, vHintT=null;
 function cardEl(src,cls){ const d=document.createElement('div'); d.className='v-card '+cls; d.innerHTML=`<img src="${esc(src)}" alt="" draggable="false">`; return d; }
 function preloadCards(from){ for(let k=from;k<Math.min(from+3,V.work.cards.length);k++){ const im=new Image(); im.src=V.work.cards[k]; } }
@@ -225,7 +251,7 @@ function openViewer(work){ if(!work||!work.cards||!work.cards.length)return; V={
   $('#vTitle').textContent=work.title||''; $('#vSub').textContent=[work.date,work.blurb].filter(Boolean).join(' · '); $('#vEndTitle').textContent=work.title||''; $('#vEnd').hidden=true; $('#vHint').classList.remove('off');
   viewer.hidden=false; buildStack(true); requestAnimationFrame(()=>viewer.classList.add('on')); document.body.classList.add('lock');
   clearTimeout(vHintT); vHintT=setTimeout(()=>$('#vHint').classList.add('off'),3500); $('#vNext').focus({preventScroll:true}); }
-function closeViewer(){ if(viewer.hidden)return; viewer.classList.remove('on'); setTimeout(()=>{ viewer.hidden=true; vStage.innerHTML=''; V=null; if(dossier.hidden&&about.hidden) document.body.classList.remove('lock'); },350); }
+function closeViewer(){ if(viewer.hidden)return; viewer.classList.remove('on'); setTimeout(()=>{ viewer.hidden=true; vStage.innerHTML=''; V=null; if(dossier.hidden&&about.hidden&&gallery.hidden) document.body.classList.remove('lock'); },350); }
 function vStep(dir){ if(!V||V.busy)return; const n=V.i+dir, len=V.work.cards.length; if(n<0)return; if(!$('#vEnd').hidden){ if(dir<0){ $('#vEnd').hidden=true; } else return; }
   if(n>=len){ $('#vEnd').hidden=false; return; }
   V.busy=true; $('#vHint').classList.add('off');
@@ -265,14 +291,17 @@ $('#aFb').addEventListener('click',fbClick); $('#fbLink').addEventListener('clic
 $('#brand').addEventListener('click',e=>{ e.preventDefault(); if(current) closeCase(); if(!about.hidden) closeAbout(); scrollTo({top:0,behavior:reduced?'auto':'smooth'}); });
 addEventListener('keydown',e=>{
   if(!viewer.hidden){ if(e.key==='Escape') closeViewer(); else if(e.key==='ArrowRight'||e.key===' '||e.key==='Enter'&&e.target===vStage){ e.preventDefault(); vStep(1); } else if(e.key==='ArrowLeft'){ e.preventDefault(); vStep(-1); } return; }
-  if(e.key==='Escape'){ if(!lb.hidden) closeLb(); else if(current) closeCase(); else if(!about.hidden) closeAbout(); } });
+  if(e.key==='Escape'){ if(!lb.hidden) closeLb(); else if(!gallery.hidden) closeGallery(); else if(current) closeCase(); else if(!about.hidden) closeAbout(); } });
 
 /* ═══════════════ 주소 → 화면 ═══════════════ */
-function parseLocation(){ const q=new URLSearchParams(location.search); let m=location.pathname.match(/^\/project\/([^/]+)\/?$/);
+function parseLocation(){ const q=new URLSearchParams(location.search); let w=location.pathname.match(/^\/project\/([^/]+)\/works\/?$/); if(w) return {view:'works',slug:decodeURIComponent(w[1])};
+  let m=location.pathname.match(/^\/project\/([^/]+)\/?$/);
   if(m) return {view:'project',slug:decodeURIComponent(m[1])}; if(q.get('id')) return {view:'project',slug:q.get('id')};
   if(/^\/about\/?$/.test(location.pathname)) return {view:'about'}; return {view:'home'}; }
 function parseTag(){ const h=location.hash.match(/^#tag=(.+)$/); if(h) return decodeURIComponent(h[1]); const q=new URLSearchParams(location.search); return q.get('tag')||'all'; }
 addEventListener('popstate',()=>{ if(!viewer.hidden) closeViewer(); const l=parseLocation();
+  if(l.view==='works'){ if(!about.hidden) closeAbout(true); if(gallery.hidden||!galleryApp||galleryApp.slug!==l.slug) openGallery(l.slug,false); return; }
+  if(!gallery.hidden) closeGallery(true);
   if(l.view==='project'){ if(current&&current.slug===l.slug)return; if(current){ current=null; dossier.classList.remove('ready'); fillDossierSwap(l.slug); return; } if(!about.hidden) closeAbout(true); openCase(l.slug,cardOf(l.slug),false); }
   else if(l.view==='about'){ if(current) closeCase(true); openAbout(false); }
   else { if(current) closeCase(true); if(!about.hidden) closeAbout(true); } });
@@ -298,12 +327,14 @@ async function boot(){
     grid.innerHTML='<div class="loading err">앱 목록(data/apps.json)을 읽지 못했습니다.<br>파일을 직접 열면(file://) 읽을 수 없어요 — 저장소 폴더에서 <code>npx serve -s .</code> 로 띄운 뒤 열어 주세요.</div>';
     return;
   }
+  if(!(window.CSS&&CSS.supports&&CSS.supports('scrollbar-gutter','stable'))){ const sbw=innerWidth-document.documentElement.clientWidth; if(sbw>0) document.documentElement.style.setProperty('--sbw',sbw+'px'); }
   renderCards(); renderChips(); updateCount();
   setFilter(parseTag(),true);
   if(document.body.classList.contains('go')) revealCards();
   const l=parseLocation();
   const delay=document.body.classList.contains('go')?0:2600;
   if(l.view==='project') setTimeout(()=>openCase(l.slug,cardOf(l.slug),false),delay);
+  else if(l.view==='works') setTimeout(()=>{ openCase(l.slug,cardOf(l.slug),false); openGallery(l.slug,false); },delay); /* 딥링크: 상세를 밑에 깔고 갤러리를 연다 */
   else if(l.view==='about') setTimeout(()=>openAbout(false),delay);
   if(document.fonts) document.fonts.ready.then(()=>drawThread(false));
 }

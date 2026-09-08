@@ -96,7 +96,7 @@
     </div>
     <div class="notice st" id="dNotice" style="--i:4"><b>속삭임</b><span></span></div>
     <dl class="facts st" id="dFacts" style="--i:5"></dl>
-    <div class="sec st" id="dWorksSec" style="--i:6" hidden><h3>작품집</h3><p class="sec-lead">표지를 누르면 한 장씩 넘겨 읽을 수 있어요.</p><div class="works" id="dWorks"></div></div>
+    <div class="sec st" id="dWorksSec" style="--i:6" hidden><div class="works-head"><h3>작품집 <small id="dWorksN"></small></h3><button type="button" class="all" id="dWorksAll" hidden>작품 모두 보기 →</button></div><p class="sec-lead">표지를 누르면 한 장씩 넘겨 읽을 수 있어요. 최근 작품 넷만 여기 두었어요.</p><div class="works" id="dWorks"></div></div>
     <div class="sec st" style="--i:6"><h3>장면들</h3><div class="gal" id="dGal"></div></div>
     <div class="sec st" style="--i:7"><h3>이 이야기의 시작</h3><div class="story" id="dStory"></div></div>
     <div class="d-foot st" style="--i:8">
@@ -124,6 +124,16 @@
   </div>
 </div>
 
+<div class="dossier gallery" id="gallery" hidden role="dialog" aria-modal="true" aria-labelledby="gTitle">
+  <div class="d-inner">
+    <div class="d-top"><button type="button" class="back" id="gBack"><i></i>돌아가기</button><span class="num" id="gCount"></span></div>
+    <p class="g-kicker st" style="--i:1">COLLECTED WORKS</p>
+    <h2 id="gTitle" class="st" style="--i:2">작품집</h2>
+    <p class="g-lead st" id="gLead" style="--i:3"></p>
+    <div class="works st" id="gWorks" style="--i:4"></div>
+    <div class="g-foot st" id="gFoot" style="--i:5"></div>
+  </div>
+</div>
 <div class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-label="카드 뷰어">
   <div class="v-top"><div class="v-head"><b class="v-title" id="vTitle"></b><span class="v-sub" id="vSub"></span></div><div class="v-right"><span class="cnt" id="vCnt"></span><button type="button" class="v-x" id="vX">닫기 ✕</button></div></div>
   <div class="v-stage" id="vStage"></div>

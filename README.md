@@ -9,7 +9,7 @@
 doguri-studio/
 ├─ index.html              홈 · 이야기 상세(/project/<slug>) · 소개(/about) 를 모두 이 한 장이 처리
 ├─ 404.html                없는 주소
-├─ vercel.json             /project/:slug, /about → index.html 로 연결(rewrite) · 캐시 헤더
+├─ vercel.json             /project/:slug, /project/:slug/works, /about → index.html 로 연결(rewrite) · 캐시 헤더
 ├─ admin.html + assets/js/admin.js   관리 화면 (/admin)
 ├─ api/admin.js            관리 화면의 서버 쪽 (Vercel 함수) — 로그인 검사 · GitHub 커밋 대행
 ├─ robots.txt, sitemap.xml
@@ -55,6 +55,7 @@ doguri-studio/
 | `notice` | 상세 상단 안내 한 줄 또는 `null` (예: "AI 기능은 claude.ai 버전에서만") |
 | `facts` | `[["러닝타임","45분"], …]` 표로 나오는 짧은 사실들 |
 | `story` | `"/content/<slug>.md"` |
+| `cardButton` | `"works"`면 서가 카드의 실행 버튼이 **「작품 보기」**가 되어 작품집 전체 화면(`/project/<slug>/works`)을 연다 (카드소설 제작소). 상세 화면의 실행 버튼은 그대로 도구를 연다 |
 | `pin` | 서가에서 고정할 자리 `1`, `2`, … 또는 `null`. 고정한 앱이 번호 순으로 맨 앞, 나머지는 `added` 최신순, `soon`은 맨 뒤 (관리 화면 05에서 조절) |
 | `added` | 올린 날짜 `"2026-09-08T17:00:00+09:00"` — 고정하지 않은 앱의 자동 순서 기준 |
 
@@ -81,7 +82,7 @@ doguri-studio/
 ]
 ```
 
-`ratio`는 카드 비율(`1:1` · `4:5` · `3:4` · `9:16`), `blurb`는 한 줄 소개(없어도 됨). 작품이 여러 개면 배열에 계속 추가. 지금 들어 있는 「젖지 않은 우산」은 앱의 예시 원고로 만든 샘플이니 본인 작품으로 바꿔도 된다.
+`ratio`는 카드 비율(`1:1` · `4:5` · `3:4` · `9:16`), `blurb`는 한 줄 소개(없어도 됨). 작품이 여러 개면 배열에 계속 추가 — **배열 앞이 최신**이고, 상세 화면에는 앞의 네 편만 보이며 다섯 편째부터는 「+N 작품 모두 보기」 타일과 `/project/<slug>/works` 갤러리에서 본다(관리 화면에서 올린 새 작품은 자동으로 맨 앞에 들어간다). 지금 들어 있는 「젖지 않은 우산」은 앱의 예시 원고로 만든 샘플이니 본인 작품으로 바꿔도 된다.
 
 
 ## 관리 화면 (/admin) — 카드소설을 브라우저에서 바로 올리기
@@ -166,6 +167,7 @@ npx serve -s .
 
 - 봉인 편지 인트로는 브라우저에 `dgr-intro-seen`을 남겨 **처음 한 번만** 나온다. 다시 보려면 개발자 도구에서 localStorage를 지우거나 시크릿 창으로 연다.
 - 「움직임 줄이기」를 켠 기기에서는 인트로·입자·안개·틸트가 모두 꺼진다.
+- 오버레이(상세·갤러리·뷰어·소개)가 열릴 때 `body`를 `overflow:hidden`으로 잠그는데, `html{scrollbar-gutter:stable}`로 스크롤바 자리를 항상 남겨 두어 화면 폭이 들썩이지 않는다(옛 브라우저는 JS가 `--sbw`를 재서 padding으로 보정).
 - 상단 헤더는 스크롤 중 **높이를 바꾸지 않는다**(compact는 배경·블러·브랜드 축소만). 높이를 바꾸면 문서 길이→scrollY→compact 토글이 서로 물고 흔들리는 버그가 생긴다(2026-09-08 수정). 전환 기준도 내려갈 때 64px·올라올 때 16px로 두었다.
 - 서체는 Google Fonts(Nanum Myeongjo, Noto Sans KR, IBM Plex Mono — OFL)에서 불러온다. IBM Plex Mono는 영문·숫자 라벨(No. 01, SEALED, 날짜)에만 쓰고, 한글이 섞이는 글은 전부 Noto Sans KR(`--label`)이다.
 - `assets/`·`data/`는 브라우저가 매번 서버에 새 버전을 묻도록(`max-age=0, must-revalidate`) 해 두었다. 배포 뒤에도 옛 화면이 보이면 한 번만 강력 새로고침(Ctrl+F5 / 모바일은 탭 닫고 다시 열기)하면 된다.
