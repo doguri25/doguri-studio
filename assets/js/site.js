@@ -6,7 +6,11 @@
 
 /* ═══════════════ 유틸 ═══════════════ */
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
-const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* 움직임: 기본은 켜짐. OS의 "움직임 줄이기"(윈도우 애니메이션 효과 끄기 등)는 그대로 따르지 않고 안내만 하며, 헤더의 ✦ 버튼으로 끄고 켠다(localStorage dgr-motion) */
+const osReduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const motionPref=(()=>{ try{ return localStorage.getItem('dgr-motion'); }catch(e){ return null; } })();
+const reduced=motionPref==='off';
+document.documentElement.classList.toggle('reduce',reduced);
 const fine=matchMedia('(hover:hover) and (pointer:fine)').matches;
 const toast=(msg)=>{const t=$('#toast');t.textContent=msg;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2600);};
 const store={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
@@ -42,10 +46,13 @@ if(fine&&!reduced){ (function loop(){ cx+=(px-cx)*.18; cy+=(py-cy)*.18; cursor.s
   document.addEventListener('pointerover',e=>{ cursor.classList.toggle('hot',!!e.target.closest('a,button,.file,.chip,.shot,.card3d')); }); }
 
 /* ═══════════════ 반딧불 · 먼지 ═══════════════ */
-(function(){ if(reduced)return; const c=$('#dust'),ctx=c.getContext('2d'); let W,H,P=[]; const N=70;
+(function(){ if(reduced)return; const c=$('#dust'),ctx=c.getContext('2d'); let W,H,P=[]; const N=90;
   const DPR=1; /* 먼지는 작은 점이라 고해상도가 필요 없다 — 4K·레티나에서 픽셀 4배를 아낀다 */
-  const size=()=>{W=c.width=innerWidth*DPR;H=c.height=innerHeight*DPR;c.style.width=innerWidth+'px';c.style.height=innerHeight+'px'};
-  size(); addEventListener('resize',size);
+  /* 폰에서 스크롤로 주소창이 접히고 펴질 때 innerHeight가 바뀌며 resize가 오는데, 그때마다 캔버스를 다시 만들면 점들이 순간이동한다.
+     캔버스는 처음부터 '가장 큰 화면 높이'로 잡고, 폭이 바뀌거나 높이가 더 커질 때만 다시 만든다(그때도 점 위치는 비율로 유지). */
+  const bigH=()=>Math.max(innerHeight,document.documentElement.clientHeight,(screen&&screen.height)||0);
+  const size=()=>{ const w=innerWidth, h=bigH(); if(W===w*DPR&&H>=h*DPR) return; W=c.width=w*DPR;H=c.height=h*DPR;c.style.width=w+'px';c.style.height=h+'px'; };
+  size(); let rzT=null; addEventListener('resize',()=>{ clearTimeout(rzT); rzT=setTimeout(size,120); });
   for(let i=0;i<N;i++)P.push({x:Math.random(),y:Math.random(),r:.5+Math.random()*1.4,a:.15+Math.random()*.45,s:.00005+Math.random()*.00012,t:Math.random()*6.28,k:Math.random()<.18});
   /* 오버레이가 덮여 있거나(body.lock) 탭이 안 보이면 그리지 않는다. 좌표는 CSS픽셀(DPR=1)이라 변환이 없다 */
   let odd=false;
@@ -262,7 +269,18 @@ $('#gBack').addEventListener('click',()=>closeGallery()); gallery.addEventListen
 const viewer=$('#viewer'), vStage=$('#vStage'); let V=null, vHintT=null;
 function cardEl(src,cls){ const d=document.createElement('div'); d.className='v-card '+cls; d.innerHTML=`<img src="${esc(src)}" alt="" draggable="false">`; return d; }
 function preloadCards(from){ for(let k=from;k<Math.min(from+3,V.work.cards.length);k++){ const im=new Image(); im.src=V.work.cards[k]; } }
+/* 카드 묶음(stage)은 next2 → next → cur 순서로 놓인다. 넘길 때 요소를 새로 만들지 않고 클래스만 승격시켜(next→cur) CSS transition으로 미끄러지게 한다 — 새로 만들면 다음 장이 한 번 "자리잡는" 점프가 보인다 */
 function buildStack(first){ vStage.innerHTML=''; const c=V.work.cards; for(let k=2;k>=0;k--){ const idx=V.i+k; if(idx<c.length) vStage.appendChild(cardEl(c[idx], k===0?('cur'+(first?' first':'')):k===1?'next':'next2')); } vUpdate(); preloadCards(V.i+1); }
+function promoteForward(){ /* V.i는 이미 +1 된 상태. 현재 cur를 돌려주고 next→cur, next2→next, 새 next2 추가 */
+  const out=$('.v-card.cur',vStage), nx=$('.v-card.next',vStage), nx2=$('.v-card.next2',vStage);
+  if(nx){ nx.classList.remove('next'); nx.classList.add('cur'); } if(nx2){ nx2.classList.remove('next2'); nx2.classList.add('next'); }
+  const idx2=V.i+2; if(idx2<V.work.cards.length){ vStage.insertBefore(cardEl(V.work.cards[idx2],'next2'),vStage.firstChild); }
+  vUpdate(); preloadCards(V.i+1); return out; }
+function demoteBackward(incoming){ /* V.i는 이미 -1 된 상태. incoming(왼쪽에서 온 카드)이 cur가 되고 cur→next, next→next2, 옛 next2 제거 */
+  const cur=$('.v-card.cur',vStage), nx=$('.v-card.next',vStage), nx2=$('.v-card.next2',vStage);
+  if(nx2) nx2.remove(); if(nx){ nx.classList.remove('next'); nx.classList.add('next2'); } if(cur){ cur.classList.remove('cur','drag','snap','fling'); cur.classList.add('next'); cur.style.cssText=''; }
+  incoming.classList.remove('prev','drag'); incoming.classList.add('cur','fling'); incoming.style.transform=''; incoming.style.opacity='';
+  setTimeout(()=>incoming.classList.remove('fling'),320); vUpdate(); preloadCards(V.i+1); }
 function vUpdate(){ const n=V.work.cards.length; $('#vCnt').textContent=String(V.i+1).padStart(2,'0')+' / '+String(n).padStart(2,'0');
   $('#vPrev').disabled=V.i===0; $('#vNext').disabled=false;
   const dots=$('#vDots'); if(n<=24){ dots.innerHTML=V.work.cards.map((_,k)=>`<i class="${k===V.i?'on':k<V.i?'seen':''}"></i>`).join(''); } else dots.innerHTML=''; }
@@ -274,9 +292,9 @@ function closeViewer(){ if(viewer.hidden)return; viewer.classList.remove('on'); 
 function vStep(dir){ if(!V||V.busy)return; const n=V.i+dir, len=V.work.cards.length; if(n<0)return; if(!$('#vEnd').hidden){ if(dir<0){ $('#vEnd').hidden=true; } else return; }
   if(n>=len){ $('#vEnd').hidden=false; return; }
   V.busy=true; $('#vHint').classList.add('off');
-  if(dir>0){ const out=$('.v-card.cur',vStage); V.i=n; buildStack(false); const cur=$('.v-card.cur',vStage); cur.classList.add('in'); if(out){ out.classList.remove('cur'); out.classList.add('out'); vStage.appendChild(out); setTimeout(()=>out.remove(),460); } }
-  else { V.i=n; buildStack(false); const cur=$('.v-card.cur',vStage); cur.classList.add('back'); }
-  setTimeout(()=>{ V.busy=false; },reduced?0:440); }
+  if(dir>0){ V.i=n; const out=promoteForward(); if(out){ out.classList.remove('cur'); out.classList.add('out'); setTimeout(()=>out.remove(),460); } }
+  else { V.i=n; const p=cardEl(V.work.cards[n],'prev'); p.style.transform='translateY(-50%) translateX(-115%) rotate(-8deg)'; p.style.opacity='0'; vStage.appendChild(p); void p.offsetWidth; demoteBackward(p); }
+  setTimeout(()=>{ V.busy=false; },reduced?0:400); }
 $('#vNext').addEventListener('click',()=>vStep(1)); $('#vPrev').addEventListener('click',()=>vStep(-1));
 $('#vX').addEventListener('click',closeViewer); $('#vClose2').addEventListener('click',closeViewer);
 $('#vAgain').addEventListener('click',()=>{ if(!V)return; $('#vEnd').hidden=true; V.i=0; buildStack(true); });
@@ -293,9 +311,8 @@ $('#vAgain').addEventListener('click',()=>{ if(!V)return; $('#vEnd').hidden=true
     if(!moved){ if(c){ c.classList.remove('drag'); c.style.transform=''; c.style.opacity=''; } if(prevEl){ prevEl.remove(); prevEl=null; }
       if(dt<400&&e){ const r=vStage.getBoundingClientRect(); vStep((e.clientX-r.left)<r.width*.4?-1:1); } return; }
     if(go&&dx<0){ /* 다음: 현재 카드를 밀어낸 방향으로 날려 보낸다 */ V.busy=true; c.classList.remove('drag'); c.classList.add('fling'); c.style.transform=`translateY(-50%) translateX(${-w*1.1}px) rotate(-14deg)`; c.style.opacity='0';
-      setTimeout(()=>{ const n=V.i+1; if(n>=V.work.cards.length){ $('#vEnd').hidden=false; c.style.cssText=''; c.classList.remove('fling'); } else { V.i=n; buildStack(false); } V.busy=false; },260); }
-    else if(go&&dx>0&&prevEl){ /* 이전: 왼쪽에서 오던 카드를 끝까지 끌어온다 */ V.busy=true; prevEl.classList.add('fling'); prevEl.style.transform='translateY(-50%)'; if(c){ c.classList.remove('drag'); c.style.transform=''; c.style.opacity=''; }
-      setTimeout(()=>{ prevEl&&prevEl.remove(); prevEl=null; V.i=V.i-1; buildStack(false); V.busy=false; },240); }
+      setTimeout(()=>{ const n=V.i+1; if(n>=V.work.cards.length){ $('#vEnd').hidden=false; c.style.cssText=''; c.classList.remove('fling'); } else { V.i=n; const out=promoteForward(); if(out) out.remove(); } V.busy=false; },260); }
+    else if(go&&dx>0&&prevEl){ /* 이전: 왼쪽에서 오던 카드가 그대로 cur가 된다 */ V.busy=true; const pe=prevEl; prevEl=null; V.i=V.i-1; demoteBackward(pe); setTimeout(()=>{ V.busy=false; },300); }
     else { /* 제자리로 */ if(c){ c.classList.remove('drag'); c.classList.add('snap'); c.style.transform=''; c.style.opacity=''; setTimeout(()=>c.classList.remove('snap'),320); } if(prevEl){ const pe=prevEl; prevEl=null; pe.classList.add('fling'); pe.style.transform='translateY(-50%) translateX(-115%) rotate(-8deg)'; setTimeout(()=>pe.remove(),300); } }
     $('#vHint').classList.add('off'); };
   vStage.addEventListener('pointerup',release); vStage.addEventListener('pointercancel',release); vStage.addEventListener('lostpointercapture',()=>{ if(dragging) release(null); });
@@ -319,6 +336,9 @@ $('#aGo').addEventListener('click',()=>{ closeAbout(); });
 $('#nameCard').addEventListener('click',()=>$('#nameCard').classList.toggle('flip'));
 const fbClick=e=>{ if(!SITE.feedbackForm){ e.preventDefault(); toast('편지함(의견 폼)은 아직 준비 중입니다.'); } };
 $('#aFb').addEventListener('click',fbClick); $('#fbLink').addEventListener('click',fbClick); $('#dFb').addEventListener('click',fbClick);
+$('#fxBtn').addEventListener('click',()=>{ store.set('dgr-motion',reduced?'on':'off'); toast(reduced?'효과를 켭니다…':'효과를 끕니다…'); setTimeout(()=>location.reload(),350); });
+$('#fxBtn').title=reduced?'화면 효과 켜기':'화면 효과 끄기'; $('#fxBtn span').textContent=reduced?'효과 꺼짐':'효과';
+if(osReduced&&motionPref===null&&!store.get('dgr-motion-hint')){ store.set('dgr-motion-hint','1'); setTimeout(()=>toast('기기에 「움직임 줄이기」가 켜져 있어요. 어지러우면 위의 ✦ 효과 버튼으로 끌 수 있습니다.'),3200); }
 $('#brand').addEventListener('click',e=>{ e.preventDefault(); if(current) closeCase(); if(!about.hidden) closeAbout(); scrollTo({top:0,behavior:reduced?'auto':'smooth'}); });
 addEventListener('keydown',e=>{
   if(!viewer.hidden){ if(e.key==='Escape') closeViewer(); else if(e.key==='ArrowRight'||e.key===' '||e.key==='Enter'&&e.target===vStage){ e.preventDefault(); vStep(1); } else if(e.key==='ArrowLeft'){ e.preventDefault(); vStep(-1); } return; }

@@ -48,16 +48,16 @@ a{color:inherit}
 ::selection{background:var(--gold);color:var(--ink)}
 
 /* ───────────────────────── 분위기 레이어 ───────────────────────── */
-#dust{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.9}
+#dust{position:fixed;left:0;top:0;z-index:0;pointer-events:none;opacity:.9}
 /* 성능: 전체 화면 레이어에는 mix-blend-mode를 쓰지 않는다(매 프레임 화면 전체를 다시 섞어야 해서 PC에서 뚝뚝 끊김). 낮은 불투명도로 같은 느낌만 낸다 */
-.grain{position:fixed;inset:-100px;z-index:60;pointer-events:none;opacity:.045;will-change:transform;
+.grain{position:fixed;inset:-100px;z-index:60;pointer-events:none;opacity:.06;will-change:transform;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   animation:grain .8s steps(4) infinite}
 @keyframes grain{0%{transform:translate(0,0)}20%{transform:translate(-30px,20px)}40%{transform:translate(20px,-40px)}60%{transform:translate(-40px,-10px)}80%{transform:translate(30px,30px)}100%{transform:translate(0,0)}}
 /* 촛불: 화면 전체 그라디언트를 매번 다시 그리지 않고, 미리 그린 원(1000px)을 transform으로만 옮긴다(GPU 합성) */
 .torch{position:fixed;left:0;top:0;width:1000px;height:1000px;margin:-500px 0 0 -500px;border-radius:50%;z-index:2;pointer-events:none;animation:flicker 2.8s ease-in-out infinite;will-change:transform;
   transform:translate3d(var(--x,50vw),var(--y,38vh),0);
-  background:radial-gradient(circle at center, rgba(240,200,120,.13), rgba(217,177,92,.045) 33%, transparent 52%)}
+  background:radial-gradient(circle at center, rgba(240,200,120,.15), rgba(217,177,92,.05) 34%, transparent 54%)}
 @keyframes flicker{0%,100%{opacity:1}37%{opacity:.82}52%{opacity:.95}71%{opacity:.86}}
 .cursor{position:fixed;left:0;top:0;width:22px;height:22px;border:1.5px solid var(--gold);border-radius:50%;pointer-events:none;z-index:200;
   transform:translate(-50%,-50%);transition:width .25s var(--ease),height .25s var(--ease),background .25s,opacity .3s;opacity:0;mix-blend-mode:difference}
@@ -97,16 +97,16 @@ a{color:inherit}
 /* 헤더 높이는 스크롤 중 절대 바뀌지 않는다 — 높이가 바뀌면 문서 길이→scrollY→compact 토글이 서로를 물고 흔들린다(달 근처에서 재현됐던 버그).
    compact 상태는 배경·블러·브랜드 축소(transform)만 바꾼다. */
 header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:16px clamp(18px,4vw,56px);min-height:64px;
-  transition:background .3s,border-color .3s;border-bottom:1px solid transparent}
+  transition:background .4s,border-color .4s,backdrop-filter .4s,-webkit-backdrop-filter .4s;border-bottom:1px solid transparent;backdrop-filter:blur(0px);-webkit-backdrop-filter:blur(0px)}
 header.compact{background:rgba(9,10,17,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-color:var(--line)}
 .brand{font:700 18px/1 var(--serif);color:var(--gold);letter-spacing:.14em;display:flex;align-items:center;gap:12px;text-decoration:none;transform-origin:left center;transition:transform .3s var(--ease)}
 header.compact .brand{transform:scale(.92)}
 .brand i{width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#f4f0e2,var(--moon) 60%,#8d93a8);box-shadow:0 0 0 3px rgba(217,221,233,.12),0 0 14px rgba(217,221,233,.5);display:inline-block;transition:transform .3s var(--pop)}
 .brand:hover i{transform:scale(1.4)}
 nav{display:flex;align-items:center;gap:clamp(14px,3vw,30px)}
-nav a,nav button{font:500 13px/1 var(--sans);color:var(--paper-2);letter-spacing:.06em;text-decoration:none;position:relative;padding:6px 0}
-nav a::after,nav button::after{content:"";position:absolute;left:0;bottom:0;height:1px;width:100%;background:var(--gold);transform:scaleX(0);transform-origin:right;transition:transform .35s var(--ease)}
-nav a:hover::after,nav button:hover::after{transform:scaleX(1);transform-origin:left}
+nav a,nav button:not(.fx){font:500 13px/1 var(--sans);color:var(--paper-2);letter-spacing:.06em;text-decoration:none;position:relative;padding:6px 0}
+nav a::after,nav button:not(.fx)::after{content:"";position:absolute;left:0;bottom:0;height:1px;width:100%;background:var(--gold);transform:scaleX(0);transform-origin:right;transition:transform .35s var(--ease)}
+nav a:hover::after,nav button:not(.fx):hover::after{transform:scaleX(1);transform-origin:left}
 nav a:hover,nav button:hover{color:var(--paper-strong)}
 .whisper-badge{font:500 12px/1 var(--label);color:var(--gold);border:1px solid rgba(217,177,92,.35);padding:6px 9px;border-radius:3px;letter-spacing:.04em;display:flex;gap:8px;align-items:center}
 .whisper-badge b{font:500 11px/1 var(--mono);font-variant-numeric:tabular-nums;letter-spacing:.08em}
@@ -140,7 +140,7 @@ body.go .hero p.lead,body.go .hero .cta{animation:fade .9s .55s var(--ease) both
 .moon{position:absolute;right:clamp(4%,8vw,10%);top:12%;width:clamp(110px,17vw,220px);aspect-ratio:1;border-radius:50%;pointer-events:none;z-index:1;
   background:radial-gradient(circle at 42% 36%,#f5f2e8,var(--moon) 55%,#9aa0b6 100%);
   box-shadow:0 0 50px rgba(217,221,233,.35),0 0 140px rgba(128,112,200,.3),inset -14px -10px 30px rgba(80,84,110,.45);
-  transform:translateY(calc(var(--sy,0)*-.1px));transition:transform .1s linear;opacity:.92}
+  transform:translateY(calc(var(--sy,0)*-.1px));transition:transform .1s linear;opacity:clamp(0, .92 - var(--sy,0) * .0032, .92)}  /* 헤더 밑으로 들어가기 전에 스르르 사라진다 — 블러에 번져 커 보이던 현상 방지 */
 .moon::before{content:"";position:absolute;inset:0;border-radius:50%;
   background:radial-gradient(circle at 30% 60%,rgba(120,124,150,.5) 0 7%,transparent 8%),radial-gradient(circle at 62% 28%,rgba(120,124,150,.45) 0 5%,transparent 6%),radial-gradient(circle at 70% 66%,rgba(120,124,150,.4) 0 9%,transparent 10%),radial-gradient(circle at 44% 80%,rgba(120,124,150,.35) 0 4%,transparent 5%)}
 .fog{position:absolute;pointer-events:none;border-radius:50%;filter:blur(34px);opacity:.75;z-index:1;will-change:transform}
@@ -370,16 +370,22 @@ footer a:hover{color:var(--gold-2);border-color:var(--gold)}
   .d-head{grid-template-columns:1fr}
   .gal{grid-template-columns:repeat(2,1fr)}
   .a-inner{grid-template-columns:1fr}
-  .moon{width:90px;right:6%;top:8%;opacity:.8}
+  .moon{width:90px;right:6%;top:8%;opacity:clamp(0, .8 - var(--sy,0) * .009, .8)}
   .grid{gap:40px 20px}
   .hero{padding-bottom:20px}
 }
-@media (prefers-reduced-motion:reduce){
-  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
-  #intro,.grain,#dust,.cursor,.fog,.mist::before{display:none!important}
-  .file.pre{opacity:1;transform:none}
-  .dossier .st,.about .st{opacity:1;transform:none}
-}
+/* 움직임 줄이기: OS 설정(prefers-reduced-motion)을 그대로 따르지 않고 헤더의 ✦ 버튼(localStorage dgr-motion)으로 켜고 끈다.
+   윈도우 "애니메이션 효과 끄기"가 켜진 PC에서 사이트가 통째로 밋밋해지던 문제 — JS가 html.reduce 를 붙일 때만 아래가 적용된다 */
+html.reduce *,html.reduce *::before,html.reduce *::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+html.reduce #intro,html.reduce .grain,html.reduce #dust,html.reduce .cursor,html.reduce .fog,html.reduce .mist::before{display:none!important}
+html.reduce .file.pre{opacity:1;transform:none}
+html.reduce .dossier .st,html.reduce .about .st{opacity:1;transform:none}
+/* 헤더의 효과 토글 */
+.fx{display:inline-flex;align-items:center;gap:6px;font:500 12px/1 var(--label);color:var(--paper-3);padding:8px 10px;border:1px solid var(--line);border-radius:999px;transition:color .2s,border-color .2s}
+.fx:hover{color:var(--gold-2);border-color:var(--gold)}
+.fx b{font:400 13px/1 var(--serif);color:var(--gold)}
+html.reduce .fx b{color:var(--paper-3)}
+@media (max-width:560px){ .fx span{display:none} .fx{padding:8px 9px} }
 
 /* ───────────────────────── 실제 스크린샷 · 마크다운 · 로딩 ───────────────────────── */
 .vis{position:absolute;inset:0}
@@ -462,6 +468,7 @@ footer a:hover{color:var(--gold-2);border-color:var(--gold)}
   border-radius:8px;overflow:hidden;background:#0c0e14;box-shadow:0 40px 100px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.07);transform-style:preserve-3d;backface-visibility:hidden;will-change:transform}
 .v-card img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
 .v-card::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,rgba(255,255,255,.06),rgba(255,255,255,0) 35%,rgba(0,0,0,0) 70%,rgba(0,0,0,.18))}
+.v-card{transition:transform .38s var(--ease),filter .38s var(--ease),opacity .3s}
 .v-card.cur{z-index:3}
 .v-card.next{z-index:2;transform:translateY(-50%) translate(14px,14px) rotate(1.6deg) scale(.985);filter:brightness(.62)}
 .v-card.next2{z-index:1;transform:translateY(-50%) translate(28px,28px) rotate(3.2deg) scale(.97);filter:brightness(.4)}
@@ -502,4 +509,4 @@ footer a:hover{color:var(--gold-2);border-color:var(--gold)}
   .v-card.next2{transform:translateY(-50%) translate(16px,16px) rotate(2.8deg) scale(.97)}
   .works{grid-template-columns:repeat(2,1fr);gap:20px 14px}
 }
-@media (prefers-reduced-motion:reduce){.v-card.out,.v-card.in,.v-card.back,.v-card.first{animation:none}.v-card.out{opacity:0}}
+html.reduce .v-card.out,html.reduce .v-card.in,html.reduce .v-card.back,html.reduce .v-card.first{animation:none}html.reduce .v-card.out{opacity:0}
