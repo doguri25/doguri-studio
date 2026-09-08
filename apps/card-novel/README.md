@@ -1,4 +1,4 @@
-# apps/card-novel
+# apps/card-novel — 단독 HTML 들어 있음 (2026-09-08)
 
 카드소설 제작소의 단독 HTML 파일을 이 폴더에 `index.html` 이름으로 넣으세요.
 

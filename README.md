@@ -77,10 +77,10 @@ npx serve -s .
 
 ## 아직 비어 있는 자리
 
-- `apps/card-novel/index.html`, `apps/nooneleft/index.html` — 단독 HTML을 넣고 `run`을 `hosted`로 바꾸기 (각 폴더의 README 참고)
-- `media/*/` — 스크린샷·썸네일
-- `site.feedbackForm` — 구글 폼 주소
-- 탐정게임 윈도우 zip — GitHub Releases에 올린 뒤 `downloads`에 주소
+- `site.feedbackForm` — 구글 폼 주소 (비어 있으면 "준비 중" 안내)
+- 탐정게임 윈도우 zip — GitHub Releases에 올린 뒤 `downloads`에 주소 추가
+- 아침 책상 — 지금은 claude.ai 아티팩트로 연결(external). 공개 API로 갱신을 다시 만들면 `apps/morning-desk/`에 넣고 hosted로 전환
+- 스크린샷은 사이트 안 앱을 그대로 찍은 것. 더 좋은 장면이 있으면 `media/<slug>/`의 파일만 바꾸면 됨
 
 ## 인트로·효과에 대해
 
