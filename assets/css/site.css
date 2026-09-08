@@ -116,7 +116,8 @@ nav a:hover,nav button:hover{color:var(--paper-strong)}
 main{position:relative;z-index:1}
 
 /* ───────────────────────── 히어로 ───────────────────────── */
-.hero{position:relative;padding:clamp(40px,8vh,90px) clamp(18px,4vw,56px) 30px;overflow:hidden;min-height:0}
+/* 가로만 잘라 낸다(overflow-x:clip) — 세로까지 hidden이면 바닥의 안개 빛무리가 섹션 경계에서 칼로 잘려 배경 톤이 갈라져 보인다 */
+.hero{position:relative;padding:clamp(40px,8vh,90px) clamp(18px,4vw,56px) 30px;overflow-x:clip;overflow-y:visible;min-height:0}
 .kicker{font:500 11px/1 var(--mono);color:var(--gold);letter-spacing:.38em;margin-bottom:22px;display:flex;align-items:center;gap:14px;position:relative;z-index:2}
 .kicker::before{content:"";width:34px;height:1px;background:var(--gold)}
 .hero h1{position:relative;z-index:2;font:800 clamp(38px,7.2vw,78px)/1.12 var(--serif);color:var(--paper-strong);letter-spacing:-.015em;text-wrap:balance;max-width:14ch}
@@ -144,7 +145,7 @@ body.go .hero p.lead,body.go .hero .cta{animation:fade .9s .55s var(--ease) both
 .moon::before{content:"";position:absolute;inset:0;border-radius:50%;
   background:radial-gradient(circle at 30% 60%,rgba(120,124,150,.5) 0 7%,transparent 8%),radial-gradient(circle at 62% 28%,rgba(120,124,150,.45) 0 5%,transparent 6%),radial-gradient(circle at 70% 66%,rgba(120,124,150,.4) 0 9%,transparent 10%),radial-gradient(circle at 44% 80%,rgba(120,124,150,.35) 0 4%,transparent 5%)}
 .fog{position:absolute;pointer-events:none;border-radius:50%;filter:blur(34px);opacity:.75;z-index:1;will-change:transform}
-.fog.a{width:70vw;height:220px;left:-10vw;bottom:-90px;background:radial-gradient(ellipse at center, var(--fog), transparent 70%);animation:driftA 38s ease-in-out infinite alternate}
+.fog.a{width:70vw;height:260px;left:-10vw;bottom:-150px;background:radial-gradient(ellipse at center, var(--fog), transparent 70%);animation:driftA 38s ease-in-out infinite alternate}
 .fog.b{width:50vw;height:180px;right:-8vw;top:8%;background:radial-gradient(ellipse at center, rgba(217,221,233,.16), transparent 70%);animation:driftB 46s ease-in-out infinite alternate}
 @keyframes driftA{to{transform:translateX(18vw) translateY(-16px)}}
 @keyframes driftB{to{transform:translateX(-14vw) translateY(24px)}}
@@ -170,7 +171,7 @@ a.btn{text-decoration:none;cursor:pointer;-webkit-user-drag:none}
 @keyframes slam2{18%{opacity:1;transform:translate(-50%,-50%) rotate(-14deg) scale(1)}62%{opacity:1;transform:translate(-50%,-50%) rotate(-14deg) scale(1)}100%{opacity:0;transform:translate(-50%,-64%) rotate(-2deg) scale(1.08)}}
 
 /* ───────────────────────── 밤의 서가 ───────────────────────── */
-.board{position:relative;padding:20px clamp(18px,4vw,56px) 60px}
+.board{position:relative;z-index:2;padding:20px clamp(18px,4vw,56px) 60px}  /* 히어로에서 흘러내린 안개 빛은 서가 글자 뒤로 */
 .board-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:16px}
 .board-head h2{font:700 clamp(20px,2.6vw,28px)/1.2 var(--serif);color:var(--paper-strong);letter-spacing:.02em}
 .board-head h2 small{display:block;font:500 10px/1 var(--mono);color:var(--gold);letter-spacing:.38em;margin-bottom:10px}
