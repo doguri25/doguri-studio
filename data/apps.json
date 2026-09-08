@@ -1,0 +1,102 @@
+{
+  "site": {
+    "name": "도구리 작업실",
+    "tagline": "이야기와 장난감 사이.",
+    "url": "https://doguri-studio.vercel.app",
+    "feedbackForm": "",
+    "feedbackField": "entry.0000000000"
+  },
+  "apps": [
+    {
+      "slug": "card-novel",
+      "num": "01",
+      "name": "카드소설 제작소",
+      "summary": "인스타·블로그용 카드뉴스형 초단편 미스터리 소설을 쓰고, 한 장씩 카드로 뽑아내는 도구.",
+      "tags": ["창작", "미스터리"],
+      "status": "live",
+      "period": "2026.09",
+      "art": "cards",
+      "thumb": null,
+      "screens": [],
+      "video": null,
+      "run": { "type": "external", "url": "https://claude.ai/code/artifact/dd7ebf3c-8815-4fbd-a3fc-991f9c5645f3" },
+      "altRun": null,
+      "downloads": [],
+      "notice": "AI 초안·AI 그림·AI 평가는 claude.ai 버전에서 실행할 때만 동작합니다. 내려받은 HTML에서도 글쓰기·카드 편집·PNG/ZIP 저장은 그대로 됩니다.",
+      "facts": [
+        ["카드 비율", "1:1 · 4:5 · 3:4 · 9:16"],
+        ["구성", "표지 → 사건 → 단서 → 반전 → 결말/질문"],
+        ["저장", "PNG · JPG · ZIP 묶음"],
+        ["테마", "13종 + 서체 선택"]
+      ],
+      "story": "/content/card-novel.md"
+    },
+    {
+      "slug": "nooneleft",
+      "num": "02",
+      "name": "나간 사람이 없다",
+      "summary": "실제 미제사건에서 모티브를 얻은 이야기형 미스터리 게임. 회차마다 진실이 바뀝니다.",
+      "tags": ["게임", "미스터리"],
+      "status": "live",
+      "period": "2026.09",
+      "art": "door",
+      "thumb": null,
+      "screens": [],
+      "video": null,
+      "run": { "type": "external", "url": "https://claude.ai/code/artifact/31364c7c-d3e8-4327-b66d-9786a7c695d7" },
+      "altRun": null,
+      "downloads": [],
+      "notice": null,
+      "facts": [
+        ["러닝타임", "회차당 45~55분"],
+        ["진실", "4종 셔플 · 결말 10종"],
+        ["플랫폼", "웹 · 윈도우 실행기"],
+        ["조작", "클릭과 선택만"]
+      ],
+      "story": "/content/nooneleft.md"
+    },
+    {
+      "slug": "morning-desk",
+      "num": "03",
+      "name": "아침 책상",
+      "summary": "날씨·기술 뉴스·할 일을 메모지 카드로 보여 주는 나만의 시작 페이지.",
+      "tags": ["일상도구"],
+      "status": "live",
+      "period": "2026.09",
+      "art": "sun",
+      "thumb": null,
+      "screens": [],
+      "video": null,
+      "run": { "type": "external", "url": "https://claude.ai/code/artifact/e38b281a-30bd-4ee5-b6ba-b667fbac2e35" },
+      "altRun": null,
+      "downloads": [],
+      "notice": "날씨와 뉴스는 매일 아침 7시에 자동으로 갱신됩니다. 자동 갱신은 claude.ai 버전에서만 동작해 지금은 그쪽으로 연결됩니다.",
+      "facts": [
+        ["갱신", "매일 07:00"],
+        ["구성", "시계 · 할 일 · 날씨 · 기술 뉴스"],
+        ["배치", "메모지 카드 2열"],
+        ["날씨", "지역 선택 가능"]
+      ],
+      "story": "/content/morning-desk.md"
+    },
+    {
+      "slug": "next",
+      "num": "04",
+      "name": "아직 쓰는 중",
+      "summary": "다음 이야기를 쓰고 있습니다. 봉인이 마르는 대로 서가에 올립니다.",
+      "tags": ["준비 중"],
+      "status": "soon",
+      "period": "",
+      "art": "soon-art",
+      "thumb": null,
+      "screens": [],
+      "video": null,
+      "run": null,
+      "altRun": null,
+      "downloads": [],
+      "notice": null,
+      "facts": [],
+      "story": null
+    }
+  ]
+}
