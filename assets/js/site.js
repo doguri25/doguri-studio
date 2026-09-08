@@ -56,7 +56,7 @@ if(fine&&!reduced){ (function loop(){ cx+=(px-cx)*.18; cy+=(py-cy)*.18; cursor.s
      캔버스는 처음부터 '가장 큰 화면 높이'로 잡고, 폭이 바뀌거나 높이가 더 커질 때만 다시 만든다(그때도 점 위치는 비율로 유지). */
   const bigH=()=>Math.max(innerHeight,document.documentElement.clientHeight,(screen&&screen.height)||0);
   const size=()=>{ const w=innerWidth, h=bigH(); if(W===w*DPR&&H>=h*DPR) return; W=c.width=w*DPR;H=c.height=h*DPR;c.style.width=w+'px';c.style.height=h+'px'; };
-  size(); let rzT=null; addEventListener('resize',()=>{ clearTimeout(rzT); rzT=setTimeout(size,120); });
+  size(); let rzT=null; addEventListener('resize',()=>{ clearTimeout(rzT); rzT=setTimeout(()=>{ size(); fitWhispers(); },120); });
   for(let i=0;i<N;i++)P.push({x:Math.random(),y:Math.random(),r:.5+Math.random()*1.4,a:.15+Math.random()*.45,s:.00005+Math.random()*.00012,t:Math.random()*6.28,k:Math.random()<.18});
   /* 오버레이가 덮여 있거나(body.lock) 탭이 안 보이면 그리지 않는다. 좌표는 CSS픽셀(DPR=1)이라 변환이 없다 */
   let odd=false;
@@ -383,26 +383,43 @@ const WHISPERS=[
   '밤에 쓴 편지는 부치지 말고 두세요','잠들기 전의 생각은 모두 진심입니다','창가의 빗소리는 오래된 자장가입니다','어둠은 눈이 아니라 마음으로 익숙해집니다',
   '밤하늘은 아무도 다 읽지 못한 책입니다','오늘 하루도 무사히 여기까지 왔습니다','이불 속의 온기는 작은 우주입니다','늦은 밤의 발자국은 조용히 지워집니다',
   '달은 매일 조금씩 다른 얼굴로 옵니다','잠든 도시 위로 이야기들이 날아갑니다','밤이 깊을수록 별은 가까워집니다','오늘의 걱정은 내일의 나에게 맡기세요',
-  '촛불 하나면 밤도 방이 됩니다','좋은 밤이 되길, 아무도 모르게 빌었습니다'
+  '촛불 하나면 밤도 방이 됩니다','좋은 밤이 되길, 아무도 모르게 빌었습니다',
+  /* 짧은 문장들 — 폰에서 한 줄에 들어간다 */
+  '밤은 천천히 옵니다','달이 먼저 알았습니다','문 뒤에 누가 있습니다','촛불이 답을 압니다','오늘 밤도 무사합니다','별 하나가 늦게 왔습니다',
+  '편지는 아직 따뜻합니다','조용히, 서랍이 열립니다','발자국이 하나 더 있습니다','비는 밤에 더 크게 옵니다','잠든 도시, 깨어 있는 서가','어둠이 눈을 뜹니다',
+  '봉인은 밤에 마릅니다','새벽은 아직 멉니다','달빛은 값을 받지 않습니다','이 문장은 오늘만 있습니다','누군가 여기 앉아 있었습니다','시계가 잠깐 멈췄습니다',
+  '오늘의 걱정은 내일에게','마지막 장은 늘 조용합니다','바람이 페이지를 넘겼습니다','안개 너머에 불빛 하나','좋은 꿈은 늦게 옵니다','별을 세다 잠들었습니다'
 ];
-function dynamicWhispers(){
+function dynamicWhispers(short){
   const out=[]; const live=APPS.filter(a=>a.status!=='soon'); const priv=live.filter(a=>a.private).length;
   const works=[]; live.forEach(a=>(a.works||[]).forEach(w=>{ if(w&&w.cards&&w.cards.length) works.push({...w,app:a}); }));
-  if(live.length) out.push(`서가에 봉인이 ${live.length}통, 그중 ${priv}통은 비공개입니다`);
-  if(works.length){ const w=works[Math.floor(Math.random()*works.length)]; out.push(`「${w.title}」은 ${w.cards.length}장 뒤에 끝납니다`); if(works.length>1) out.push(`카드소설 ${works.length}편이 서가에 꽂혀 있습니다`); }
-  const newest=live.filter(a=>!a.pin).sort((a,b)=>(Date.parse(b.added||'')||0)-(Date.parse(a.added||'')||0))[0]; if(newest) out.push(`가장 최근에 봉인된 것은 「${newest.name}」입니다`);
+  if(live.length) out.push(short?`봉인 ${live.length}통 · 비공개 ${priv}통`:`서가에 봉인이 ${live.length}통, 그중 ${priv}통은 비공개입니다`);
+  if(works.length){ const w=works[Math.floor(Math.random()*works.length)]; out.push(short?`「${w.title}」 ${w.cards.length}장`:`「${w.title}」은 ${w.cards.length}장 뒤에 끝납니다`); if(works.length>1) out.push(short?`카드소설 ${works.length}편`:`카드소설 ${works.length}편이 서가에 꽂혀 있습니다`); }
+  const newest=live.filter(a=>!a.pin).sort((a,b)=>(Date.parse(b.added||'')||0)-(Date.parse(a.added||'')||0))[0]; if(newest) out.push(short?`최근 봉인 「${newest.name}」`:`가장 최근에 봉인된 것은 「${newest.name}」입니다`);
   return out;
+}
+/* 속삭임이 층(.whispers) 밖으로 나가면 마스크에 잘려 보인다 — 그려 놓고 재서 안쪽으로 밀어 넣는다(위·아래·양옆 8px 여백) */
+function fitWhispers(){
+  const box=$('#whispers'); if(!box) return; const wr=box.getBoundingClientRect(); const m=8;
+  $$('.whisper',box).forEach(el=>{ const r=el.getBoundingClientRect(); let dx=0,dy=0;
+    if(r.right>wr.right-m) dx=wr.right-m-r.right; if(r.left+dx<wr.left+m) dx=wr.left+m-r.left;
+    if(r.bottom>wr.bottom-m) dy=wr.bottom-m-r.bottom; if(r.top+dy<wr.top+m) dy=wr.top+m-r.top;
+    if(dx||dy){ el.style.left=(r.left-wr.left+dx)+'px'; el.style.top=(r.top-wr.top+dy)+'px'; } });
+  whisperEls=null; whisperBoxT=0;
 }
 function renderWhispers(){
   const box=$('#whispers'); if(!box) return;
+  const mobile=innerWidth<=560; const maxLen=mobile?18:26; /* 폰은 한 줄에 들어갈 짧은 문장만 */
   let last=[]; try{ last=JSON.parse(store.get('dgr-whisper-last')||'[]'); }catch(e){}
-  let pool=[...WHISPERS,...dynamicWhispers(),...((SITE.whispers||[]).filter(x=>typeof x==='string'&&x.trim()))];
+  let pool=[...WHISPERS,...dynamicWhispers(mobile),...((SITE.whispers||[]).filter(x=>typeof x==='string'&&x.trim()))];
+  const shortPool=pool.filter(t=>t.length<=maxLen); if(shortPool.length>=6) pool=shortPool;
   const fresh=pool.filter(t=>!last.includes(t)); if(fresh.length>=3) pool=fresh;
   const pick=[]; while(pick.length<3&&pool.length){ const i=Math.floor(Math.random()*pool.length); pick.push(pool.splice(i,1)[0]); }
-  const mobile=innerWidth<=560; /* 폰: 글자와 안 겹치는 빈 자리(왼쪽 위·버튼 옆·맨 아래), PC: 오른쪽 절반 */
-  const slots=mobile?[{l:4,t:1},{l:50,t:71},{l:28,t:90}]:[{l:48,t:5},{l:56,t:48},{l:52,t:82}]; const j=()=> ((Math.random()*8-4)*(mobile?.4:1)).toFixed(1);
+  /* 폰: 글자와 안 겹치는 빈 자리(왼쪽 위·버튼 옆·맨 아래), PC: 오른쪽 절반 */
+  const slots=mobile?[{l:4,t:1},{l:50,t:66},{l:26,t:91}]:[{l:48,t:5},{l:56,t:48},{l:52,t:82}]; const j=()=> ((Math.random()*8-4)*(mobile?.4:1)).toFixed(1);
   box.innerHTML=pick.map((t,i)=>{ const s=slots[i]; return `<span class="whisper" style="left:${(s.l+ +j()).toFixed(1)}%;top:${(s.t+ +j()/2).toFixed(1)}%;--r:${(Math.random()*4-2).toFixed(1)}deg">${esc(t)}</span>`; }).join('');
   store.set('dgr-whisper-last',JSON.stringify(pick)); whisperEls=null; whisperBoxT=0;
+  requestAnimationFrame(fitWhispers); if(document.fonts) document.fonts.ready.then(fitWhispers);
 }
 /* 서가 순서: pin(1,2,…)이 있는 앱이 그 번호 순으로 먼저, 나머지는 added(올린 날짜) 최신순, '쓰는 중'은 맨 뒤.
    apps.json 배열 순서와 무관하게 여기서 정한다 — 관리 화면 「서가 순서」에서 pin을 바꾼다. */

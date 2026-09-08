@@ -376,10 +376,10 @@ footer a:hover{color:var(--gold-2);border-color:var(--gold)}
   .gal{grid-template-columns:repeat(2,1fr)}
   .a-inner{grid-template-columns:1fr}
   .moon{width:90px;right:6%;top:8%;opacity:clamp(0, .8 - var(--sy,0) * .009, .8)}
-  .whisper{white-space:normal;max-width:46%;font-size:13px;line-height:1.5;background:rgba(9,10,17,.7);padding:6px 10px;border-radius:3px;border:1px solid rgba(217,177,92,.25)}  /* 폰: 줄바꿈 허용 + 쪽지처럼 어두운 바탕 — 글자 위에 얹혀도 읽힌다 */
+  .whisper{white-space:nowrap;font-size:12.5px;line-height:1.5;background:rgba(9,10,17,.72);padding:6px 10px;border-radius:3px;border:1px solid rgba(217,177,92,.25)}  /* 폰: 한 줄 짧은 문장만 고르고, 쪽지처럼 어두운 바탕 — 글자 위에 얹혀도 읽힌다 */
   .whisper::before{display:none}
   .grid{gap:40px 20px}
-  .hero{padding-bottom:20px}
+  .hero{padding-bottom:64px}  /* 맨 아래 속삭임 자리 */
 }
 /* 움직임 줄이기: OS 설정(prefers-reduced-motion)을 그대로 따르지 않고 헤더의 ✦ 버튼(localStorage dgr-motion)으로 켜고 끈다.
    윈도우 "애니메이션 효과 끄기"가 켜진 PC에서 사이트가 통째로 밋밋해지던 문제 — JS가 html.reduce 를 붙일 때만 아래가 적용된다 */
