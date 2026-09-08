@@ -93,6 +93,20 @@ body{background-image:radial-gradient(ellipse 60% 40% at 90% 0%, rgba(128,112,20
 .setup code{font:400 12px/1 var(--mono);background:rgba(9,10,17,.6);padding:3px 6px;border-radius:3px;color:var(--paper-strong)}
 .setup p+p{margin-top:8px}
 .log{font-family:var(--label)}
+/* 작품 안 카드 편집 */
+.witem.editing{border-color:rgba(217,177,92,.5)}
+.wedit{grid-column:1/-1;padding:12px 0 4px;border-top:1px dashed var(--line);margin-top:6px}
+.wedit .cards{margin-top:0}
+.wedit .cards .cd img{aspect-ratio:var(--ar,1)}
+.wedit .drop{padding:14px;margin-top:12px}
+.wedit .drop b{font-size:13.5px}
+.wedit .row{margin-top:12px}
+.cd.gone{outline:2px solid var(--wax-2);opacity:.45}
+.cd .n.new{background:#9fd7a6}
+.field textarea#tStory{font:400 13.5px/1.75 var(--label);min-height:260px}
+.field .hint code{font:400 11px/1 var(--mono);background:rgba(9,10,17,.6);padding:2px 5px;border-radius:3px;color:var(--paper-2)}
+#pwHint{color:var(--wax-2);opacity:0;transition:opacity .2s}
+#pwHint.on{opacity:1}
 @media (max-width:560px){.witem{grid-template-columns:52px minmax(0,1fr)}.witem .ops{grid-column:1/-1;justify-content:flex-start}}
 </style>
 </head>
@@ -107,7 +121,7 @@ body{background-image:radial-gradient(ellipse 60% 40% at 90% 0%, rgba(128,112,20
       <div class="login-methods" id="loginMethods" hidden>
         <div class="lm" id="lmGoogle" hidden><div id="gsi"></div><span class="hint">허용된 구글 계정으로만 열립니다.</span></div>
         <div class="lm-or" id="lmOr" hidden>또는</div>
-        <div class="lm" id="lmPass" hidden><div class="field"><label>관리자 비밀번호</label><input id="pw" type="password" autocomplete="current-password" placeholder="••••••••••••"></div><div class="row" style="margin-top:10px"><button type="button" class="btn gold" id="btnPw">들어가기</button></div></div>
+        <div class="lm" id="lmPass" hidden><div class="field"><label>관리자 비밀번호</label><input id="pw" type="password" autocomplete="current-password" lang="en" inputmode="latin" spellcheck="false" placeholder="영문·숫자·기호만"><span class="hint" id="pwHint">한글은 입력되지 않습니다. 한/영 키를 확인해 주세요.</span></div><div class="row" style="margin-top:10px"><button type="button" class="btn gold" id="btnPw">들어가기</button></div></div>
       </div>
       <div class="row"><span class="status" id="stLogin">확인하는 중…</span></div>
     </div>
@@ -117,7 +131,7 @@ body{background-image:radial-gradient(ellipse 60% 40% at 90% 0%, rgba(128,112,20
 
   <section class="panel" id="pWorks" hidden>
     <h2><span class="step">02</span>올라가 있는 작품집</h2>
-    <p class="desc">순서를 바꾸거나 지운 뒤 <b>변경 사항 게시</b>를 누르면 반영됩니다. 표지는 언제나 첫 장입니다.</p>
+    <p class="desc">작품의 순서를 바꾸거나 지우고, <b>카드 편집</b>으로 각 작품 안의 카드 순서를 바꾸거나 빼거나 더할 수 있어요. 다 고친 뒤 <b>변경 사항 게시</b>를 누르면 한 번에 반영됩니다. 표지는 언제나 첫 장입니다.</p>
     <div class="fields"><div class="field"><label>어느 앱의 작품집인가요</label><select id="appSel"></select></div></div>
     <div class="wlist" id="wlist"></div>
     <div class="row"><button type="button" class="btn gold" id="btnSaveWorks" disabled>변경 사항 게시</button><span class="status" id="stWorks"></span></div>
@@ -129,7 +143,7 @@ body{background-image:radial-gradient(ellipse 60% 40% at 90% 0%, rgba(128,112,20
     <div class="fields">
       <div class="field"><label>제목</label><input id="wTitle" placeholder="예) 젖지 않은 우산"></div>
       <div class="field"><label>날짜</label><input id="wDate" placeholder="2026.09"></div>
-      <div class="field"><label>카드 비율</label><select id="wRatio"><option value="1:1">1:1 (정사각)</option><option value="4:5">4:5 (인스타 세로)</option><option value="3:4">3:4</option><option value="9:16">9:16 (스토리)</option></select></div>
+      <div class="field"><label>카드 비율</label><select id="wRatio"><option value="3:4" selected>3:4 (인스타 새 세로 · 1080×1440)</option><option value="4:5">4:5 (인스타 옛 세로 · 1080×1350)</option><option value="1:1">1:1 (정사각)</option><option value="9:16">9:16 (스토리)</option></select><span class="hint">카드 파일의 실제 비율과 맞춰 주세요. 뷰어와 표지가 이 비율로 보입니다.</span></div>
       <div class="field"><label>폴더 이름 (영문·숫자·하이픈)</label><input id="wSlug" placeholder="자동"><span class="hint">주소와 폴더에 쓰입니다. 비우면 자동으로 정해요.</span></div>
       <div class="field wide"><label>한 줄 소개 (선택)</label><input id="wBlurb" placeholder="예) 비 오는 밤, 우산꽂이에 우산이 하나 남았다."></div>
     </div>
@@ -139,6 +153,19 @@ body{background-image:radial-gradient(ellipse 60% 40% at 90% 0%, rgba(128,112,20
     <div class="bar" id="bar" hidden><i></i></div>
     <div class="log" id="log"></div>
     <div class="done" id="done" hidden></div>
+  </section>
+
+  <section class="panel" id="pText" hidden>
+    <h2><span class="step">04</span>앱 소개 글 고치기</h2>
+    <p class="desc">상세 화면의 <b>제목 밑 한 줄 소개</b>, <b>속삭임</b>(노란 안내 상자), <b>이 이야기의 시작</b>(긴 글)을 여기서 바로 고칩니다. 저장하면 약 1분 뒤 사이트에 반영돼요.</p>
+    <div class="fields">
+      <div class="field"><label>어느 앱인가요</label><select id="tAppSel"></select></div>
+      <div class="field wide"><label>한 줄 소개 (제목 밑)</label><textarea id="tSummary" rows="2" placeholder="예) 인스타·블로그용 카드뉴스형 초단편 미스터리 소설을 쓰고, 한 장씩 카드로 내보내는 도구."></textarea></div>
+      <div class="field wide"><label>속삭임 (비우면 상자가 사라져요)</label><textarea id="tNotice" rows="2" placeholder="예) 이 사이트에서 열면 글쓰기·카드 편집·PNG 저장이 모두 됩니다."></textarea></div>
+      <div class="field wide"><label>이 이야기의 시작 (마크다운)</label><textarea id="tStory" rows="16" spellcheck="false" placeholder="아직 글이 없습니다. 여기에 쓰면 content/<앱>.md 파일이 만들어져요."></textarea>
+        <span class="hint">빈 줄로 문단을 나눕니다 · <code>## 소제목</code> · <code>- 목록</code> · <code>&gt; 인용</code> · <code>**굵게**</code> · <code>*기울임*</code> · <code>[글자](주소)</code> 링크</span></div>
+    </div>
+    <div class="row"><button type="button" class="btn gold" id="btnSaveText" disabled>저장하고 게시</button><button type="button" class="btn line" id="btnReloadText">되돌리기</button><span class="status" id="stText"></span></div>
   </section>
 </div>
 <script src="/assets/js/admin.js" defer></script>

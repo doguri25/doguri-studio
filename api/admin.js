@@ -14,8 +14,10 @@
      GET  ?op=config                         → 어떤 로그인 방법이 켜져 있는지
      POST op=login  {credential} | {password} → {token, exp, who}
      POST op=apps                             → 저장소의 data/apps.json (Authorization: Bearer <token>)
+     POST op=file   {path}                    → content/<slug>.md 같은 텍스트 파일 (없으면 missing:true)
      POST op=blob   {base64}                  → {sha}  이미지 1장을 블롭으로
      POST op=commit {message, files:[{path,sha}|{path,text}], deletions:[path]} → {sha}
+   쓸 수 있는 경로: media/<앱>/works/<작품>/*.webp|jpg|png · data/apps.json · content/<앱>.md
 */
 const crypto = require('crypto');
 
@@ -24,8 +26,9 @@ const REPO = ENV.GITHUB_REPO || 'doguri25/doguri-studio';
 const BRANCH = ENV.GITHUB_BRANCH || 'main';
 const SESSION_HOURS = 12;
 const MAX_BLOB = 3 * 1024 * 1024;           // base64 기준 3MB
-const OK_WRITE = [/^media\/[a-z0-9-]+\/works\/[a-z0-9-]+\/[a-z0-9-]+\.(webp|jpe?g|png)$/i, /^data\/apps\.json$/];
+const OK_WRITE = [/^media\/[a-z0-9-]+\/works\/[a-z0-9-]+\/[a-z0-9-]+\.(webp|jpe?g|png)$/i, /^data\/apps\.json$/, /^content\/[a-z0-9-]+\.md$/];
 const OK_DELETE = [/^media\/[a-z0-9-]+\/works\/[a-z0-9-]+\/[a-z0-9-]+\.(webp|jpe?g|png)$/i];
+const OK_READ = [/^data\/apps\.json$/, /^content\/[a-z0-9-]+\.md$/];
 
 module.exports = async function handler(req, res) {
   const url = new URL(req.url || '/', 'http://x');
@@ -43,6 +46,7 @@ module.exports = async function handler(req, res) {
     if (!who) return send(res, 401, { error: '로그인이 필요합니다' });
     if (!ENV.GITHUB_TOKEN) return send(res, 500, { error: 'Vercel 환경변수 GITHUB_TOKEN이 없습니다' });
     if (op === 'apps') return send(res, 200, await readApps());
+    if (op === 'file') return send(res, 200, await readFile(body));
     if (op === 'blob') return send(res, 200, await makeBlob(body));
     if (op === 'commit') return send(res, 200, await commit(body));
     return send(res, 400, { error: '모르는 요청: ' + op });
@@ -121,8 +125,15 @@ async function gh(path, opts = {}) {
   return r.status === 204 ? null : r.json();
 }
 const repo = () => `/repos/${REPO}`;
-async function readApps() {
-  const j = await gh(`${repo()}/contents/data/apps.json?ref=${encodeURIComponent(BRANCH)}`);
+async function readApps() { return readFile({ path: 'data/apps.json' }); }
+/* 저장소의 텍스트 파일 하나 (apps.json, content/<slug>.md). 없으면 빈 글로 돌려준다 */
+async function readFile(body) {
+  const p = String(body.path || '');
+  if (!OK_READ.some(re => re.test(p))) throw err(400, '읽을 수 없는 경로: ' + p);
+  const r = await fetch(`${API}${repo()}/contents/${p}?ref=${encodeURIComponent(BRANCH)}`, { headers: { 'Authorization': 'Bearer ' + ENV.GITHUB_TOKEN, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'doguri-studio-admin' } });
+  if (r.status === 404) return { sha: null, text: '', missing: true };
+  if (!r.ok) { let m = ''; try { m = (await r.json()).message || ''; } catch (e) {} throw err(502, `GitHub ${r.status} ${m || r.statusText}`.trim()); }
+  const j = await r.json();
   const text = Buffer.from(String(j.content || '').replace(/\n/g, ''), 'base64').toString('utf8');
   return { sha: j.sha, text };
 }

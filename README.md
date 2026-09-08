@@ -86,16 +86,26 @@ doguri-studio/
 
 `https://doguri-studio.vercel.app/admin` 을 열면 관리 화면이 나온다. **관리자만** 들어올 수 있고(구글 로그인 또는 비밀번호), 저장소 열쇠(GitHub 토큰)는 Vercel 서버에만 있어 브라우저로 내려오지 않는다. 사진을 넣고 순서를 맞춘 뒤 **게시하기**를 누르면 이미지가 자동으로 줄어(긴 변 1080px, webp) 저장소에 커밋되고, Vercel이 다시 배포해 약 1분 뒤 사이트에 나타난다. 올라간 작품의 순서 바꾸기·제목 고치기·지우기도 여기서 한다.
 
-구조: 브라우저 → `api/admin.js`(Vercel 서버리스 함수 1개) → GitHub API. 함수가 로그인을 검사하고, 허용된 경로(`media/<앱>/works/**`, `data/apps.json`)에만 쓴다.
+구조: 브라우저 → `api/admin.js`(Vercel 서버리스 함수 1개) → GitHub API. 함수가 로그인을 검사하고, 허용된 경로(`media/<앱>/works/**`, `data/apps.json`, `content/<앱>.md`)에만 쓴다.
+
+관리 화면에서 할 수 있는 것:
+
+| 칸 | 할 수 있는 것 |
+|---|---|
+| 02 올라가 있는 작품집 | 작품 순서 ▲▼ · **제목·소개·비율** 고치기 · **카드 편집**(작품 안 카드 순서 바꾸기·빼기·더하기) · 작품 지우기 → **변경 사항 게시**로 한 번에 커밋 |
+| 03 새 작품 올리기 | 카드 이미지 여러 장 → 순서 맞추기 → 게시. 기본 비율은 **3:4(인스타 새 세로, 1080×1440)**. 4:5·1:1·9:16도 고를 수 있고, 표지·뷰어가 그 비율로 보인다 |
+| 04 앱 소개 글 고치기 | 상세 화면의 **한 줄 소개**(제목 밑) · **속삭임**(노란 안내 상자, 비우면 사라짐) · **이 이야기의 시작**(마크다운 긴 글, `content/<앱>.md`) 편집 → 저장하고 게시 |
+
+카드 순서만 바꾸면 파일 이름은 그대로 두고 `apps.json`의 순서만 바뀐다(파일 이름 번호가 순서와 달라도 괜찮다). 카드를 더하면 기존 번호 다음 번호로 저장된다.
 
 ### 처음 한 번: Vercel 환경변수
 
-Vercel → 프로젝트 → **Settings → Environment Variables** 에 아래를 넣고, **Deployments → 맨 위 배포 → ⋯ → Redeploy** 한다. (환경변수는 다시 배포해야 반영된다.)
+Vercel → 프로젝트 → 왼쪽 **Settings → Environments → Production** 안의 **Environment Variables** 칸에 아래를 넣고(예전 화면에서는 Settings → Environment Variables), 왼쪽 **Deployments → 맨 위 배포 → ⋯ → Redeploy** 한다. (환경변수는 다시 배포해야 반영된다.)
 
 | 이름 | 값 | 필수 |
 |---|---|---|
 | `GITHUB_TOKEN` | GitHub fine-grained 토큰 (아래 만드는 법) | ✅ |
-| `ADMIN_PASSWORD` | 관리자 비밀번호. 12자 이상, 다른 데서 안 쓰는 것 | 로그인 A |
+| `ADMIN_PASSWORD` | 관리자 비밀번호. **영문·숫자·기호만**(로그인 칸이 한글을 받지 않는다), 12자 이상, 다른 데서 안 쓰는 것 | 로그인 A |
 | `GOOGLE_CLIENT_ID` | 구글 OAuth 클라이언트 ID (`…apps.googleusercontent.com`) | 로그인 B |
 | `ADMIN_EMAIL` | 허용할 구글 계정 (여러 개면 쉼표) | 로그인 B |
 | `GITHUB_REPO` | 기본 `doguri25/doguri-studio` — 다르면 적기 | 선택 |
