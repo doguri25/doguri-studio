@@ -56,6 +56,29 @@ doguri-studio/
 
 `site` 항목: `name`, `tagline`, `url`(sitemap·robots에 쓴 주소와 맞추기), `feedbackForm`(구글 폼 주소, 비우면 "준비 중" 안내), `feedbackField`(폼에서 앱 이름이 들어갈 항목의 `entry.xxxxx` 값 — 폼의 "미리 채운 링크 받기"로 확인).
 
+
+## 작품집(카드 묶음) 올리기 — 카드소설처럼 "한 장씩 넘겨 보는" 작품
+
+앱 항목에 `works` 배열을 두면 상세 화면에 「작품집」 칸이 생기고, 표지를 누르면 카드 뷰어가 떠서 한 장씩 넘겨 읽는다(← → 키, 옆으로 밀기, 화면 좌·우 탭, 점 표시, 마지막에 "THE END").
+
+1. `media/<slug>/works/<작품slug>/` 폴더에 카드 이미지를 순서대로 넣는다. 이름은 `01.webp`, `02.webp`… 처럼 번호 순이면 된다(jpg·png도 됨). 한 변 1080px면 충분.
+2. `data/apps.json`의 해당 앱에 아래처럼 추가한다.
+
+```json
+"works": [
+  {
+    "slug": "dry-umbrella",
+    "title": "젖지 않은 우산",
+    "date": "2026.09",
+    "ratio": "1:1",
+    "blurb": "비 오는 밤, 우산꽂이에 우산이 하나 남았다.",
+    "cards": ["/media/card-novel/works/dry-umbrella/01.webp", "/media/card-novel/works/dry-umbrella/02.webp", "…"]
+  }
+]
+```
+
+`ratio`는 카드 비율(`1:1` · `4:5` · `3:4` · `9:16`), `blurb`는 한 줄 소개(없어도 됨). 작품이 여러 개면 배열에 계속 추가. 지금 들어 있는 「젖지 않은 우산」은 앱의 예시 원고로 만든 샘플이니 본인 작품으로 바꿔도 된다.
+
 ## 로컬에서 보기
 
 `index.html`을 파일로 직접 열면(`file://`) JSON·마크다운을 읽지 못한다. 저장소 폴더에서:

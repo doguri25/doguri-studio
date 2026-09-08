@@ -15,7 +15,7 @@
 <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap">
 <link rel="stylesheet" href="/assets/css/site.css">
 </head>
 <body>
@@ -96,6 +96,7 @@
     </div>
     <div class="notice st" id="dNotice" style="--i:4"><b>속삭임</b><span></span></div>
     <dl class="facts st" id="dFacts" style="--i:5"></dl>
+    <div class="sec st" id="dWorksSec" style="--i:6" hidden><h3>작품집</h3><p class="sec-lead">표지를 누르면 한 장씩 넘겨 읽을 수 있어요.</p><div class="works" id="dWorks"></div></div>
     <div class="sec st" style="--i:6"><h3>장면들</h3><div class="gal" id="dGal"></div></div>
     <div class="sec st" style="--i:7"><h3>이 이야기의 시작</h3><div class="story" id="dStory"></div></div>
     <div class="d-foot st" style="--i:8">
@@ -123,6 +124,14 @@
   </div>
 </div>
 
+<div class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-label="카드 뷰어">
+  <div class="v-top"><div class="v-head"><b class="v-title" id="vTitle"></b><span class="v-sub" id="vSub"></span></div><div class="v-right"><span class="cnt" id="vCnt"></span><button type="button" class="v-x" id="vX">닫기 ✕</button></div></div>
+  <div class="v-stage" id="vStage"></div>
+  <button type="button" class="v-nav prev" id="vPrev" aria-label="이전 카드">‹</button>
+  <button type="button" class="v-nav next" id="vNext" aria-label="다음 카드">›</button>
+  <div class="v-bottom"><div class="v-dots" id="vDots"></div><div class="v-hint" id="vHint">← → 키나 옆으로 밀어서 넘기기</div></div>
+  <div class="v-end" id="vEnd" hidden><span class="k">THE END</span><b id="vEndTitle"></b><p>여기까지가 이번 이야기입니다.</p><div class="row"><button type="button" class="btn line" id="vAgain">처음부터 다시</button><button type="button" class="btn gold" id="vClose2">서가로 돌아가기</button></div></div>
+</div>
 <div class="lb" id="lb" hidden><button type="button" class="x" id="lbX">닫기 ✕</button><div class="frame" id="lbFrame"></div></div>
 <div id="toast" role="status" aria-live="polite"></div>
 

@@ -3,8 +3,8 @@
     "name": "도구리 작업실",
     "tagline": "이야기와 장난감 사이.",
     "url": "https://doguri-studio.vercel.app",
-    "feedbackForm": "",
-    "feedbackField": "entry.0000000000"
+    "feedbackForm": "https://docs.google.com/forms/d/e/1FAIpQLSfGYkPIjYMp6pggbwKcP7cJZf7tYMD-eHa9MRflpc_0iFph7g/viewform",
+    "feedbackField": ""
   },
   "apps": [
     {
@@ -57,11 +57,33 @@
           "PNG · JPG · ZIP 묶음"
         ],
         [
-          "테마",
-          "13종 + 서체 선택"
+          "작품집",
+          "아래에서 한 장씩 넘겨 읽기"
         ]
       ],
-      "story": "/content/card-novel.md"
+      "story": "/content/card-novel.md",
+      "works": [
+        {
+          "slug": "dry-umbrella",
+          "title": "젖지 않은 우산",
+          "date": "2026.09",
+          "ratio": "1:1",
+          "blurb": "비 오는 밤, 우산꽂이에 우산이 하나 남았다. 3분 미스터리 · 11장",
+          "cards": [
+            "/media/card-novel/works/dry-umbrella/01.webp",
+            "/media/card-novel/works/dry-umbrella/02.webp",
+            "/media/card-novel/works/dry-umbrella/03.webp",
+            "/media/card-novel/works/dry-umbrella/04.webp",
+            "/media/card-novel/works/dry-umbrella/05.webp",
+            "/media/card-novel/works/dry-umbrella/06.webp",
+            "/media/card-novel/works/dry-umbrella/07.webp",
+            "/media/card-novel/works/dry-umbrella/08.webp",
+            "/media/card-novel/works/dry-umbrella/09.webp",
+            "/media/card-novel/works/dry-umbrella/10.webp",
+            "/media/card-novel/works/dry-umbrella/11.webp"
+          ]
+        }
+      ]
     },
     {
       "slug": "nooneleft",
