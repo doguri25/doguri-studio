@@ -16,9 +16,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap">
-<link rel="stylesheet" href="/assets/css/site.css?v=202609081845">
+<link rel="stylesheet" href="/assets/css/site.css?v=202609081900">
 </head>
-<body>
+<body class="site">
 
 <div id="intro" role="button" aria-label="건너뛰기">
   <div class="env">
@@ -50,10 +50,7 @@
     <div class="fog a" aria-hidden="true"></div>
     <div class="fog b" aria-hidden="true"></div>
     <div class="moon" aria-hidden="true"></div>
-    <div class="whispers" id="whispers" aria-hidden="true">
-      <span class="whisper" style="left:48%;top:5%;--r:-2deg">이 페이지는 밤에만 열립니다</span>
-      <span class="whisper" style="left:54%;top:50%;--r:1.5deg">세 번째 서랍은 아직 열지 마세요</span>
-      <span class="whisper" style="left:36%;top:86%;--r:-1deg">누군가 먼저 다녀간 흔적이 있습니다</span>
+    <div class="whispers" id="whispers" aria-hidden="true"><!-- 속삭임 3개는 site.js가 올 때마다 다른 문장으로 채운다 -->
     </div>
     <div class="kicker">MYSTERIES OF DOGURI</div>
     <h1 id="title">도구리의 <em>작업실</em></h1>
@@ -146,6 +143,6 @@
 <div class="lb" id="lb" hidden><button type="button" class="x" id="lbX">닫기 ✕</button><div class="frame" id="lbFrame"></div></div>
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script src="/assets/js/site.js?v=202609081845" defer></script>
+<script src="/assets/js/site.js?v=202609081900" defer></script>
 </body>
 </html>

@@ -20,6 +20,10 @@ const SITE_NAME='도구리 작업실';
 const BUILD=(()=>{ try{ const src=(document.currentScript&&document.currentScript.src)||''; const m=/[?&]v=([0-9a-z]+)/i.exec(src); return m?m[1]:''; }catch(e){ return ''; } })();
 let SITE={}, APPS=[];
 
+/* 복사·드래그 선택 방지 (공개 페이지만): 링크 드래그·이미지 저장 메뉴는 두고, 글자 복사와 선택만 막는다 */
+['copy','cut','selectstart'].forEach(ev=>document.addEventListener(ev,e=>{ if(!document.body.classList.contains('site')) return; const t=e.target; if(t&&(t.closest&&t.closest('input,textarea'))) return; e.preventDefault(); }));
+addEventListener('keydown',e=>{ if(!document.body.classList.contains('site')) return; if((e.ctrlKey||e.metaKey)&&(e.key==='a'||e.key==='A')&&!(e.target&&e.target.closest&&e.target.closest('input,textarea'))) e.preventDefault(); });
+
 /* ═══════════════ 인트로: 처음 온 사람에게만 ═══════════════ */
 const intro=$('#intro');
 function finishIntro(){ if(!intro||intro._done)return; intro._done=true; intro.classList.add('open'); setTimeout(()=>{intro.remove();document.body.classList.add('go');revealCards();},1250); store.set('dgr-intro-seen','1'); }
@@ -359,6 +363,47 @@ addEventListener('popstate',()=>{ if(!viewer.hidden) closeViewer(); const l=pars
 function fillDossierSwap(slug){ const n=APPS.find(a=>a.slug===slug&&a.status!=='soon'); if(!n){ closeCase(true); return; } setTimeout(()=>{ current=n; currentCard=cardOf(slug); fillDossier(n); dossier.scrollTo({top:0}); requestAnimationFrame(()=>dossier.classList.add('ready')); },60); }
 
 /* ═══════════════ 시작: 데이터 읽기 ═══════════════ */
+/* ═══════════════ 속삭임: 올 때마다 다른 세 문장 ═══════════════
+   기본 문장 묶음 + 지금 서가 상태로 만드는 문장(작품 수·장 수·비공개 편수 등) + apps.json site.whispers(있으면)에서 3개를 뽑는다.
+   직전 방문에 나온 문장은 피한다(localStorage dgr-whisper-last). 자리는 세 칸에 살짝 흔들림을 준다. */
+const WHISPERS=[
+  '이 페이지는 밤에만 열립니다','세 번째 서랍은 아직 열지 마세요','누군가 먼저 다녀간 흔적이 있습니다','촛불이 흔들리면 문장이 바뀝니다',
+  '봉인은 뜯는 사람의 것입니다','달이 기울면 서가가 한 칸 늘어납니다','읽지 않은 편지가 아직 따뜻합니다','모든 이야기는 첫 장이 가장 조용합니다',
+  '여기서 본 것은 여기 두고 가세요','잉크가 마르기 전에 돌아오세요','문은 안쪽에서만 잠깁니다','진실은 회차마다 자리를 바꿉니다',
+  '우산 하나가 젖지 않은 이유를 아십니까','카드는 한 장씩만 넘기세요','주파수를 맞추면 누군가 대답합니다','공을 잡는 순간 기(氣)가 오릅니다',
+  '중앙선을 넘은 공은 죽은 공이 됩니다','사진은 어디에도 남지 않습니다','약속은 인쇄되어야 지켜집니다','아침 일곱 시, 책상이 스스로 정리됩니다',
+  '새 봉인은 늘 맨 뒤에서 마릅니다','서가는 최근 것을 앞에 둡니다','밤의 서가에는 시계가 없습니다','이 속삭임은 다음에 오면 없습니다',
+  '안개는 서가 쪽으로 흘러갑니다','열쇠는 브라우저에 두지 않습니다','두 번째 달은 렌즈 안에만 뜹니다','봉인 번호는 순서가 아니라 이름입니다',
+  '문 뒤의 이야기는 문이 열릴 때까지 자랍니다','속삭임을 셋 모으면 서랍이 열립니다',
+  /* 밤에 어울리는 문장들 */
+  '밤은 모든 소리를 조금 더 멀리 보냅니다','잠들지 못한 사람에게만 보이는 문장입니다','창문 너머의 불빛도 누군가의 밤입니다','달빛은 오래 걸어온 사람을 먼저 비춥니다',
+  '오늘 못 한 말은 내일 아침에도 남아 있어요','별은 세다가 멈춘 자리에서 다시 셉니다','밤공기는 낮에 못 한 생각을 데려옵니다','이 시간의 커피는 조금 더 조용합니다',
+  '잠깐 멈춘 시계도 밤에는 정확합니다','새벽 세 시의 글자는 아침에 다시 읽으세요','불을 끄면 비로소 보이는 것들이 있습니다','밤은 길지 않아요, 다만 천천히 갑니다',
+  '오늘의 마지막 페이지를 접어 두었습니다','누군가의 밤에도 같은 달이 떠 있습니다','조용한 밤에는 마음의 글씨가 커집니다','가로등 하나가 골목의 밤을 다 지킵니다',
+  '밤에 쓴 편지는 부치지 말고 두세요','잠들기 전의 생각은 모두 진심입니다','창가의 빗소리는 오래된 자장가입니다','어둠은 눈이 아니라 마음으로 익숙해집니다',
+  '밤하늘은 아무도 다 읽지 못한 책입니다','오늘 하루도 무사히 여기까지 왔습니다','이불 속의 온기는 작은 우주입니다','늦은 밤의 발자국은 조용히 지워집니다',
+  '달은 매일 조금씩 다른 얼굴로 옵니다','잠든 도시 위로 이야기들이 날아갑니다','밤이 깊을수록 별은 가까워집니다','오늘의 걱정은 내일의 나에게 맡기세요',
+  '촛불 하나면 밤도 방이 됩니다','좋은 밤이 되길, 아무도 모르게 빌었습니다'
+];
+function dynamicWhispers(){
+  const out=[]; const live=APPS.filter(a=>a.status!=='soon'); const priv=live.filter(a=>a.private).length;
+  const works=[]; live.forEach(a=>(a.works||[]).forEach(w=>{ if(w&&w.cards&&w.cards.length) works.push({...w,app:a}); }));
+  if(live.length) out.push(`서가에 봉인이 ${live.length}통, 그중 ${priv}통은 비공개입니다`);
+  if(works.length){ const w=works[Math.floor(Math.random()*works.length)]; out.push(`「${w.title}」은 ${w.cards.length}장 뒤에 끝납니다`); if(works.length>1) out.push(`카드소설 ${works.length}편이 서가에 꽂혀 있습니다`); }
+  const newest=live.filter(a=>!a.pin).sort((a,b)=>(Date.parse(b.added||'')||0)-(Date.parse(a.added||'')||0))[0]; if(newest) out.push(`가장 최근에 봉인된 것은 「${newest.name}」입니다`);
+  return out;
+}
+function renderWhispers(){
+  const box=$('#whispers'); if(!box) return;
+  let last=[]; try{ last=JSON.parse(store.get('dgr-whisper-last')||'[]'); }catch(e){}
+  let pool=[...WHISPERS,...dynamicWhispers(),...((SITE.whispers||[]).filter(x=>typeof x==='string'&&x.trim()))];
+  const fresh=pool.filter(t=>!last.includes(t)); if(fresh.length>=3) pool=fresh;
+  const pick=[]; while(pick.length<3&&pool.length){ const i=Math.floor(Math.random()*pool.length); pick.push(pool.splice(i,1)[0]); }
+  const mobile=innerWidth<=560; /* 폰: 글자와 안 겹치는 빈 자리(왼쪽 위·버튼 옆·맨 아래), PC: 오른쪽 절반 */
+  const slots=mobile?[{l:4,t:1},{l:50,t:71},{l:28,t:90}]:[{l:48,t:5},{l:56,t:48},{l:52,t:82}]; const j=()=> ((Math.random()*8-4)*(mobile?.4:1)).toFixed(1);
+  box.innerHTML=pick.map((t,i)=>{ const s=slots[i]; return `<span class="whisper" style="left:${(s.l+ +j()).toFixed(1)}%;top:${(s.t+ +j()/2).toFixed(1)}%;--r:${(Math.random()*4-2).toFixed(1)}deg">${esc(t)}</span>`; }).join('');
+  store.set('dgr-whisper-last',JSON.stringify(pick)); whisperEls=null; whisperBoxT=0;
+}
 /* 서가 순서: pin(1,2,…)이 있는 앱이 그 번호 순으로 먼저, 나머지는 added(올린 날짜) 최신순, '쓰는 중'은 맨 뒤.
    apps.json 배열 순서와 무관하게 여기서 정한다 — 관리 화면 「서가 순서」에서 pin을 바꾼다. */
 function shelfOrder(list){
@@ -383,7 +428,7 @@ async function boot(){
     return;
   }
   if(!(window.CSS&&CSS.supports&&CSS.supports('scrollbar-gutter','stable'))){ const sbw=innerWidth-document.documentElement.clientWidth; if(sbw>0) document.documentElement.style.setProperty('--sbw',sbw+'px'); }
-  renderCards(); renderChips(); updateCount();
+  renderWhispers(); renderCards(); renderChips(); updateCount();
   setFilter(parseTag(),true);
   if(document.body.classList.contains('go')) revealCards();
   const l=parseLocation();

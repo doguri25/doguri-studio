@@ -46,6 +46,10 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 a{color:inherit}
 :focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:2px}
 ::selection{background:var(--gold);color:var(--ink)}
+/* 공개 페이지(body.site)는 글자 선택·복사·길게 눌러 뜨는 메뉴를 막는다 — 오터치·오클릭에 글자가 파랗게 잡히지 않게. 관리 화면(admin.html)은 해당 없음 */
+body.site,body.site *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body.site ::selection{background:transparent}
+body.site input,body.site textarea{-webkit-user-select:text;user-select:text}
 
 /* ───────────────────────── 분위기 레이어 ───────────────────────── */
 #dust{position:fixed;left:0;top:0;z-index:0;pointer-events:none;opacity:.9}
@@ -372,6 +376,8 @@ footer a:hover{color:var(--gold-2);border-color:var(--gold)}
   .gal{grid-template-columns:repeat(2,1fr)}
   .a-inner{grid-template-columns:1fr}
   .moon{width:90px;right:6%;top:8%;opacity:clamp(0, .8 - var(--sy,0) * .009, .8)}
+  .whisper{white-space:normal;max-width:46%;font-size:13px;line-height:1.5;background:rgba(9,10,17,.7);padding:6px 10px;border-radius:3px;border:1px solid rgba(217,177,92,.25)}  /* 폰: 줄바꿈 허용 + 쪽지처럼 어두운 바탕 — 글자 위에 얹혀도 읽힌다 */
+  .whisper::before{display:none}
   .grid{gap:40px 20px}
   .hero{padding-bottom:20px}
 }
