@@ -203,8 +203,70 @@
       "story": "/content/morning-desk.md"
     },
     {
-      "slug": "next",
+      "slug": "samguk-dodgeball",
       "num": "04",
+      "name": "삼국피구",
+      "summary": "삼국지 장수들로 3대3 피구를 벌이는 브라우저 게임. 38개 진영·209명 장수, 한 판 평가전부터 51개 거점을 두고 다투는 점령전까지.",
+      "tags": [
+        "게임",
+        "삼국지"
+      ],
+      "status": "live",
+      "period": "2026.09",
+      "art": "court",
+      "thumb": "/media/samguk-dodgeball/thumb.webp",
+      "screens": [
+        "/media/samguk-dodgeball/01.webp",
+        "/media/samguk-dodgeball/02.webp",
+        "/media/samguk-dodgeball/03.webp",
+        "/media/samguk-dodgeball/04.webp",
+        "/media/samguk-dodgeball/05.webp"
+      ],
+      "video": null,
+      "run": {
+        "type": "hosted",
+        "url": "/apps/samguk-dodgeball/"
+      },
+      "altRun": null,
+      "downloads": [
+        {
+          "label": "게임 HTML",
+          "file": "/apps/samguk-dodgeball/index.html",
+          "filename": "삼국피구_10.7.3.html",
+          "size": "0.9 MB"
+        },
+        {
+          "label": "설명서 (Markdown)",
+          "file": "/apps/samguk-dodgeball/manual.md",
+          "filename": "삼국피구_설명서_10.7.3.md",
+          "size": "33 KB"
+        }
+      ],
+      "notice": "PC에서 키보드로 하는 게 가장 편해요 (WASD 이동 · J 던지기 · K 잡기 · L 회피 · Q 교대). 폰에서는 가로로 돌리면 조이스틱과 버튼이 나옵니다. 점령전 기록은 브라우저에 저장되고, 「기록 저장」으로 JSON 파일로 내보낼 수 있어요.",
+      "facts": [
+        [
+          "방식",
+          "3대3 피구 · 한 명 조작, 둘은 자동"
+        ],
+        [
+          "규모",
+          "38개 진영 · 209명 장수 · 51개 거점"
+        ],
+        [
+          "모드",
+          "평가전 · 군웅 제패전 · 점령전"
+        ],
+        [
+          "한 경기",
+          "2분 · 마지막 장수가 퇴장하면 즉시 종료"
+        ]
+      ],
+      "story": "/content/samguk-dodgeball.md",
+      "works": []
+    },
+    {
+      "slug": "next",
+      "num": "05",
       "name": "아직 쓰는 중",
       "summary": "다음 이야기를 쓰고 있습니다. 봉인이 마르는 대로 서가에 올립니다.",
       "tags": [

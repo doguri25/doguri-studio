@@ -153,6 +153,7 @@ npx serve -s .
 - 탐정게임 — 지금은 `private: true`로 비공개(실행·다운로드 누르면 "비공개입니다"). 공개할 때 `apps/nooneleft/README.md` 참고
 - 아침 책상 — 지금은 claude.ai 아티팩트로 연결(external). 공개 API로 갱신을 다시 만들면 `apps/morning-desk/`에 넣고 hosted로 전환
 - 스크린샷은 사이트 안 앱을 그대로 찍은 것. 더 좋은 장면이 있으면 `media/<slug>/`의 파일만 바꾸면 됨
+- 삼국피구(`apps/samguk-dodgeball/`)는 게임 HTML(10.7.3)과 설명서(`manual.md`)를 그대로 둔 것. 새 버전이 나오면 `index.html`만 바꾸고 `data/apps.json`의 downloads 라벨·용량과 `content/samguk-dodgeball.md`의 버전 언급을 맞추면 된다
 
 ## 인트로·효과에 대해
 

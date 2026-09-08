@@ -249,7 +249,12 @@ body.go .hero p.lead,body.go .hero .cta{animation:fade .9s .55s var(--ease) both
 .file:hover .art.sun::before,.gal .art.sun::before{--sy2:-10%}
 .art.sun i{position:absolute;left:12%;top:16%;width:22%;height:14%;background:rgba(230,226,218,.12);border-radius:2px;box-shadow:0 26px 0 rgba(230,226,218,.08)}
 .art.sun i+i{left:auto;right:12%;top:12%;width:18%}
-.art.soon-art{background:#111319}
+/* 피구 코트: 중앙선·센터서클 위로 공이 날아간다 */
+.art.court{background:linear-gradient(180deg,#17303a 0%,#10232b 100%);box-shadow:inset 0 0 0 1px rgba(217,177,92,.25)}
+.art.court::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(230,226,218,.35);box-shadow:0 0 0 0 transparent}
+.art.court::after{content:"";position:absolute;left:50%;top:50%;width:26%;aspect-ratio:1;border:1px solid rgba(230,226,218,.35);border-radius:50%;transform:translate(-50%,-50%)}
+.art.court i{position:absolute;left:22%;top:56%;width:11%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 30%,#f4d78a,var(--gold) 55%,#8a6a2a);box-shadow:0 6px 14px rgba(0,0,0,.5),0 0 18px rgba(217,177,92,.35);z-index:2;transform:translate(var(--bx,0),var(--by,0)) rotate(var(--br,0deg));transition:transform 1s var(--ease)}
+.file:hover .art.court i,.gal .art.court i{--bx:520%;--by:-120%;--br:540deg}
 .art.soon-art i{position:absolute;inset:18%;border:1px dashed rgba(230,226,218,.35);border-radius:2px;display:grid;place-items:center;font:700 40px/1 var(--serif);color:rgba(230,226,218,.35)}
 .art.soon-art i::before{content:"?"}
 
