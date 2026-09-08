@@ -354,6 +354,7 @@ a.btn{text-decoration:none;cursor:pointer;-webkit-user-drag:none}
 .nc .tip{font:400 10px/1 var(--mono);color:var(--paper-3);letter-spacing:.2em}
 .a-text h2{font:800 clamp(26px,3.6vw,38px)/1.2 var(--serif);color:var(--paper-strong);text-wrap:balance}
 .a-text p{margin-top:16px;color:var(--paper-2);line-height:1.85;max-width:44em}
+.a-text p b{color:var(--paper);font-weight:500}
 .a-text .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
 .about .st{opacity:0;transform:translateY(16px)}
 .about.ready .st{animation:fade .7s var(--ease) both;animation-delay:calc(var(--i)*90ms)}

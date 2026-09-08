@@ -205,7 +205,7 @@ function fillDossier(app){
   $$('.shot:not(.video)',$('#dGal')).forEach(s=>{ s.addEventListener('click',()=>openLb(s.dataset.src?`<img src="${esc(s.dataset.src)}" alt="">`:s.innerHTML)); s.addEventListener('keydown',e=>{ if(e.key==='Enter') s.click(); }); });
   renderWorks(app);
   $('#dStory').innerHTML='<p class="loading">봉인을 뜯는 중…</p>'; loadStory(app).then(h=>{ if(current&&current.slug===app.slug) $('#dStory').innerHTML=h; });
-  $('#dFb').href=feedbackURL(app);
+  $('#dFb').href=feedbackURL(app); if(SITE.feedbackForm){ $('#dFb').target='_blank'; $('#dFb').rel='noopener'; }
   document.title=app.name+' · '+SITE_NAME;
 }
 function cardOf(slug){ return $(`.file[data-slug="${CSS.escape(slug)}"]`,grid); }
@@ -445,6 +445,8 @@ async function boot(){
     return;
   }
   if(!(window.CSS&&CSS.supports&&CSS.supports('scrollbar-gutter','stable'))){ const sbw=innerWidth-document.documentElement.clientWidth; if(sbw>0) document.documentElement.style.setProperty('--sbw',sbw+'px'); }
+  /* 편지 보내기(푸터·소개): 폼 주소를 실제로 링크에 채운다 — 전에는 href="#"인 채라 눌러도 아무 일이 없었다 */
+  const fb=feedbackURL(); ['#fbLink','#aFb'].forEach(id=>{ const a=$(id); if(!a) return; a.href=fb; if(SITE.feedbackForm){ a.target='_blank'; a.rel='noopener'; } });
   renderWhispers(); renderCards(); renderChips(); updateCount();
   setFilter(parseTag(),true);
   if(document.body.classList.contains('go')) revealCards();
