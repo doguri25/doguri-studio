@@ -106,6 +106,21 @@ body{background-image:radial-gradient(ellipse 60% 40% at 90% 0%, rgba(128,112,20
 .field textarea#tStory{font:400 13.5px/1.75 var(--label);min-height:260px}
 .field .hint code{font:400 11px/1 var(--mono);background:rgba(9,10,17,.6);padding:2px 5px;border-radius:3px;color:var(--paper-2)}
 #pwHint{color:var(--wax-2);opacity:0;transition:opacity .2s}
+/* 스위치 */
+.tg-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:4px}
+.tg{position:relative;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:12px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:4px;background:rgba(9,10,17,.35);cursor:pointer;transition:border-color .2s}
+.tg:hover{border-color:rgba(217,177,92,.5)}
+.tg input{position:absolute;opacity:0;pointer-events:none}
+.tg .sw{grid-row:1/3;width:38px;height:22px;border-radius:999px;background:rgba(230,226,218,.18);position:relative;transition:background .2s}
+.tg .sw::after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:var(--paper);transition:transform .2s var(--pop)}
+.tg input:checked+.sw{background:var(--gold)}
+.tg input:checked+.sw::after{transform:translateX(16px);background:#14120f}
+.tg input:disabled+.sw{opacity:.3}
+.tg.danger input:checked+.sw{background:var(--wax-2)}
+.tg.danger input:checked+.sw::after{background:#fff}
+.tg b{font:600 13px/1.3 var(--label);color:var(--paper-strong)}
+.tg small{font:400 11.5px/1.4 var(--label);color:var(--paper-3)}
+.tg input:focus-visible+.sw{outline:2px solid var(--gold);outline-offset:2px}
 /* 잠금 안내 */
 .lock{margin-top:14px;padding:12px 14px;border:1px solid rgba(184,57,77,.5);border-left:3px solid var(--wax-2);border-radius:3px;background:rgba(184,57,77,.08);font:400 13px/1.7 var(--label);color:var(--paper)}
 .lock[hidden]{display:none}
@@ -139,7 +154,7 @@ body{background-image:radial-gradient(ellipse 60% 40% at 90% 0%, rgba(128,112,20
 <body>
 <div class="a-wrap" id="top-of-page">
   <div class="a-top"><a class="brand" href="/"><i></i>도구리 작업실<small>ADMIN</small></a><a class="home" href="/">← 사이트로</a></div>
-  <nav class="qnav" id="qnav" aria-label="관리 메뉴"><a href="#pLogin" data-p="pLogin"><b>01</b>관리자</a><a href="#pWorks" data-p="pWorks" hidden><b>02</b>작품집</a><a href="#pNew" data-p="pNew" hidden><b>03</b>새 작품</a><a href="#pText" data-p="pText" hidden><b>04</b>소개 글</a><a href="#pOrder" data-p="pOrder" hidden><b>05</b>서가 순서</a><a href="#top-of-page" class="up" title="맨 위로">↑</a></nav>
+  <nav class="qnav" id="qnav" aria-label="관리 메뉴"><a href="#pLogin" data-p="pLogin"><b>01</b>관리자</a><a href="#pWorks" data-p="pWorks" hidden><b>02</b>작품집</a><a href="#pNew" data-p="pNew" hidden><b>03</b>새 작품</a><a href="#pText" data-p="pText" hidden><b>04</b>소개·공개</a><a href="#pOrder" data-p="pOrder" hidden><b>05</b>서가 순서</a><a href="#top-of-page" class="up" title="맨 위로">↑</a></nav>
 
   <section class="panel" id="pLogin">
     <h2><span class="step">01</span>관리자 확인</h2>
@@ -184,10 +199,18 @@ body{background-image:radial-gradient(ellipse 60% 40% at 90% 0%, rgba(128,112,20
   </section>
 
   <section class="panel" id="pText" hidden>
-    <h2><span class="step">04</span>앱 소개 글 고치기</h2>
-    <p class="desc">상세 화면의 <b>제목 밑 한 줄 소개</b>, <b>속삭임</b>(노란 안내 상자), <b>이 이야기의 시작</b>(긴 글)을 여기서 바로 고칩니다. 저장하면 약 1분 뒤 사이트에 반영돼요.</p>
+    <h2><span class="step">04</span>앱 소개 글 · 공개 설정</h2>
+    <p class="desc">상세 화면의 <b>제목 밑 한 줄 소개</b>, <b>속삭임</b>(노란 안내 상자), <b>이 이야기의 시작</b>(긴 글)을 여기서 바로 고칩니다. 아래 <b>공개 설정</b>에서 실행·다운로드 버튼을 켜고 끄거나 앱을 비공개로 돌릴 수도 있어요. 저장하면 약 1분 뒤 사이트에 반영돼요.</p>
     <div class="fields">
       <div class="field"><label>어느 앱인가요</label><select id="tAppSel"></select></div>
+      <div class="field wide toggles" id="tToggles">
+        <label>공개 설정</label>
+        <div class="tg-row">
+          <label class="tg"><input type="checkbox" id="tAllowRun"><span class="sw"></span><b>실행 허용</b><small>끄면 실행 버튼이 비활성(회색)이 돼요</small></label>
+          <label class="tg"><input type="checkbox" id="tAllowDl"><span class="sw"></span><b>다운로드 허용</b><small>끄면 다운로드 버튼·파일 목록이 숨겨져요</small></label>
+          <label class="tg danger"><input type="checkbox" id="tPrivate"><span class="sw"></span><b>비공개</b><small>실행·다운로드를 누르면 「비공개입니다」만 뜨고, 카드에 PRIVATE 표시</small></label>
+        </div>
+      </div>
       <div class="field wide"><label>한 줄 소개 (제목 밑)</label><textarea id="tSummary" rows="2" placeholder="예) 인스타·블로그용 카드뉴스형 초단편 미스터리 소설을 쓰고, 한 장씩 카드로 내보내는 도구."></textarea></div>
       <div class="field wide"><label>속삭임 (비우면 상자가 사라져요)</label><textarea id="tNotice" rows="2" placeholder="예) 이 사이트에서 열면 글쓰기·카드 편집·PNG 저장이 모두 됩니다."></textarea></div>
       <div class="field wide"><label>이 이야기의 시작 (마크다운)</label><textarea id="tStory" rows="16" spellcheck="false" placeholder="아직 글이 없습니다. 여기에 쓰면 content/<앱>.md 파일이 만들어져요."></textarea>

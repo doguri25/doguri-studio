@@ -262,6 +262,13 @@ a.btn{text-decoration:none;cursor:pointer;-webkit-user-drag:none}
 .art.court::after{content:"";position:absolute;left:50%;top:50%;width:26%;aspect-ratio:1;border:1px solid rgba(230,226,218,.35);border-radius:50%;transform:translate(-50%,-50%)}
 .art.court i{position:absolute;left:22%;top:56%;width:11%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 30%,#f4d78a,var(--gold) 55%,#8a6a2a);box-shadow:0 6px 14px rgba(0,0,0,.5),0 0 18px rgba(217,177,92,.35);z-index:2;transform:translate(var(--bx,0),var(--by,0)) rotate(var(--br,0deg));transition:transform 1s var(--ease)}
 .file:hover .art.court i,.gal .art.court i{--bx:520%;--by:-120%;--br:540deg}
+/* 네컷 사진: 크림색 인화지 위에 네 칸, 마우스를 올리면 살짝 들린다 */
+.art.necut{background:radial-gradient(ellipse at 20% 15%,rgba(255,196,160,.25),transparent 55%),linear-gradient(160deg,#2b2320,#15121a)}
+.art.necut i{position:absolute;left:50%;top:50%;width:40%;height:74%;background:#f3e9d6;border-radius:3px;box-shadow:0 10px 24px rgba(0,0,0,.5);transform:translate(-50%,-50%) rotate(var(--na,-5deg)) translateY(var(--ny,0));transition:transform .6s var(--pop)}
+.art.necut i::before{content:"";position:absolute;left:10%;top:8%;width:80%;height:58%;background:linear-gradient(90deg,#7fb8a6 0 48%,transparent 48% 52%,#7fb8a6 52%),linear-gradient(#e9dcc4,#e9dcc4);background-size:100% 46%,100% 100%;background-repeat:no-repeat;border-radius:2px}
+.art.necut i::after{content:"";position:absolute;left:10%;bottom:9%;width:80%;height:16%;background:linear-gradient(90deg,transparent 0 6%,#f07a5a 6% 94%,transparent 94%);border-radius:999px;opacity:.85}
+.file:hover .art.necut i,.gal .art.necut i{--na:3deg;--ny:-6%}
+.art.soon-art{background:#111319}
 .art.soon-art i{position:absolute;inset:18%;border:1px dashed rgba(230,226,218,.35);border-radius:2px;display:grid;place-items:center;font:700 40px/1 var(--serif);color:rgba(230,226,218,.35)}
 .art.soon-art i::before{content:"?"}
 

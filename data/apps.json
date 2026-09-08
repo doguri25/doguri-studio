@@ -86,7 +86,9 @@
             "/media/card-novel/works/dry-umbrella/11.webp"
           ]
         }
-      ]
+      ],
+      "allowRun": true,
+      "allowDownload": true
     },
     {
       "slug": "nooneleft",
@@ -133,7 +135,9 @@
         ]
       ],
       "story": "/content/nooneleft.md",
-      "private": true
+      "private": true,
+      "allowRun": true,
+      "allowDownload": true
     },
     {
       "slug": "morning-desk",
@@ -178,7 +182,9 @@
           "지역 선택 가능"
         ]
       ],
-      "story": "/content/morning-desk.md"
+      "story": "/content/morning-desk.md",
+      "allowRun": true,
+      "allowDownload": true
     },
     {
       "slug": "samguk-dodgeball",
@@ -242,11 +248,89 @@
         ]
       ],
       "story": "/content/samguk-dodgeball.md",
-      "works": []
+      "works": [],
+      "allowRun": true,
+      "allowDownload": true
+    },
+    {
+      "slug": "yaksok-necut",
+      "num": "05",
+      "pin": null,
+      "added": "2026-09-08T18:00:00+09:00",
+      "name": "약속네컷",
+      "summary": "학교폭력예방·생활교육 행사와 교실에서 쓰는 네컷 포토부스. 친구와 사진을 찍고 스티커와 약속 문장으로 꾸며 4×6 사진으로 뽑아요.",
+      "tags": [
+        "교실",
+        "포토부스"
+      ],
+      "status": "live",
+      "period": "2026.09",
+      "art": "necut",
+      "thumb": "/media/yaksok-necut/thumb.webp",
+      "screens": [
+        "/media/yaksok-necut/01.webp",
+        "/media/yaksok-necut/02.webp",
+        "/media/yaksok-necut/03.webp",
+        "/media/yaksok-necut/04.webp",
+        "/media/yaksok-necut/05.webp",
+        "/media/yaksok-necut/06.webp"
+      ],
+      "video": null,
+      "run": {
+        "type": "external",
+        "url": "https://doguri25.github.io/yaksoknekut/"
+      },
+      "altRun": {
+        "label": "GitHub 저장소 (소스 · 수정 기록)",
+        "url": "https://github.com/doguri25/yaksoknekut"
+      },
+      "downloads": [
+        {
+          "label": "윈도우 앱 (zip · Releases)",
+          "file": "https://github.com/doguri25/yaksoknekut/releases/latest",
+          "filename": "",
+          "size": ""
+        },
+        {
+          "label": "교사용 안내서 (PDF)",
+          "file": "https://raw.githubusercontent.com/doguri25/yaksoknekut/master/docs/%EC%95%BD%EC%86%8D%EB%84%A4%EC%BB%B7_%EA%B5%90%EC%82%AC%EC%9A%A9_%EC%95%88%EB%82%B4%EC%84%9C.pdf",
+          "filename": "",
+          "size": ""
+        },
+        {
+          "label": "학생용 안내 포스터 (PDF)",
+          "file": "https://raw.githubusercontent.com/doguri25/yaksoknekut/master/docs/%EC%95%BD%EC%86%8D%EB%84%A4%EC%BB%B7_%ED%95%99%EC%83%9D%EC%9A%A9_%EC%95%88%EB%82%B4_%ED%8F%AC%EC%8A%A4%ED%84%B0.pdf",
+          "filename": "",
+          "size": ""
+        }
+      ],
+      "notice": "브라우저 버전은 설치 없이 바로 열리고, 인쇄는 브라우저 인쇄창에서 4×6을 고릅니다. 확인창 없는 자동 인쇄·전자칠판 모니터·잠금·설정 보관은 윈도우 앱(zip)으로 하세요. 사진은 어디에도 저장되지 않아요.",
+      "facts": [
+        [
+          "대상",
+          "초등 1~6학년 · 행사와 교실"
+        ],
+        [
+          "흐름",
+          "컷 수 → 액자 → 4장 촬영 → 고르기 → 필터·꾸미기 → 뽑기"
+        ],
+        [
+          "꾸미기",
+          "스티커 · 약속 문장 · 손글씨 · 행사별 액자 세트"
+        ],
+        [
+          "라이선스",
+          "CC BY-NC-ND 4.0 · 학교에서 자유롭게"
+        ]
+      ],
+      "story": "/content/yaksok-necut.md",
+      "works": [],
+      "allowRun": true,
+      "allowDownload": true
     },
     {
       "slug": "next",
-      "num": "05",
+      "num": "06",
       "pin": null,
       "added": "2026-09-08T00:00:00+09:00",
       "name": "아직 쓰는 중",
@@ -265,7 +349,9 @@
       "downloads": [],
       "notice": null,
       "facts": [],
-      "story": null
+      "story": null,
+      "allowRun": true,
+      "allowDownload": true
     }
   ]
 }

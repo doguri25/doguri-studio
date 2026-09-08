@@ -252,17 +252,19 @@ let TSEL='', TORIG=null, TLOADING=false, TNOTE='';
 const tApp=()=>APPSJSON.apps.find(a=>a.slug===TSEL);
 const storyPath=a=>(a.story?a.story.replace(/^\//,''):`content/${a.slug}.md`);
 function buildTextSel(){ const s=$('#tAppSel'); s.innerHTML=APPSJSON.apps.map(a=>`<option value="${esc(a.slug)}">${esc(a.name)}${a.status==='soon'?' (쓰는 중)':''}</option>`).join(''); if(![...s.options].some(o=>o.value===TSEL)) TSEL=SEL||s.options[0]?.value||''; s.value=TSEL; }
-function textDirty(){ if(!TORIG) return false; return $('#tSummary').value!==TORIG.summary||$('#tNotice').value!==TORIG.notice||$('#tStory').value!==TORIG.story; }
+const tFlags=()=>({allowRun:$('#tAllowRun').checked,allowDownload:$('#tAllowDl').checked,private:$('#tPrivate').checked});
+function textDirty(){ if(!TORIG) return false; const f=tFlags(); return $('#tSummary').value!==TORIG.summary||$('#tNotice').value!==TORIG.notice||$('#tStory').value!==TORIG.story||f.allowRun!==TORIG.allowRun||f.allowDownload!==TORIG.allowDownload||f.private!==TORIG.private; }
 function textState(){ const d=textDirty(); $('#btnSaveText').disabled=!d||TLOADING; if(!TLOADING) st($('#stText'),d?'고친 내용이 있어요. 저장하고 게시를 누르면 반영됩니다.':TNOTE); }
 async function loadText(){
   const a=tApp(); if(!a) return; TLOADING=true; $('#btnSaveText').disabled=true; st($('#stText'),'불러오는 중…');
   $('#tSummary').value=a.summary||''; $('#tNotice').value=a.notice||''; $('#tStory').value='';
-  try{ const f=await api('file',{path:storyPath(a)}); $('#tStory').value=f.text||''; TORIG={summary:a.summary||'',notice:a.notice||'',story:f.text||''}; TNOTE=f.missing?'이야기 글은 아직 없어요. 써서 저장하면 새로 만들어집니다.':''; }
-  catch(e){ TORIG={summary:a.summary||'',notice:a.notice||'',story:''}; TNOTE='이야기 글을 불러오지 못했습니다: '+e.message; }
+  $('#tAllowRun').checked=a.allowRun!==false; $('#tAllowDl').checked=a.allowDownload!==false; $('#tPrivate').checked=!!a.private; $('#tAllowRun').disabled=!(a.run&&a.run.url); $('#tAllowDl').disabled=!(a.downloads&&a.downloads.length);
+  try{ const f=await api('file',{path:storyPath(a)}); $('#tStory').value=f.text||''; TORIG={summary:a.summary||'',notice:a.notice||'',story:f.text||'',...tFlags()}; TNOTE=f.missing?'이야기 글은 아직 없어요. 써서 저장하면 새로 만들어집니다.':''; }
+  catch(e){ TORIG={summary:a.summary||'',notice:a.notice||'',story:'',...tFlags()}; TNOTE='이야기 글을 불러오지 못했습니다: '+e.message; }
   TLOADING=false; textState();
 }
 $('#tAppSel').addEventListener('change',e=>{ if(textDirty()&&!confirm('저장하지 않은 글이 있어요. 버리고 넘어갈까요?')){ e.target.value=TSEL; return; } TSEL=e.target.value; loadText(); });
-['#tSummary','#tNotice','#tStory'].forEach(id=>$(id).addEventListener('input',textState));
+['#tSummary','#tNotice','#tStory'].forEach(id=>$(id).addEventListener('input',textState)); ['#tAllowRun','#tAllowDl','#tPrivate'].forEach(id=>$(id).addEventListener('change',textState));
 $('#btnReloadText').addEventListener('click',()=>{ if(textDirty()&&!confirm('고친 내용을 버리고 저장된 글로 되돌릴까요?')) return; loadText(); });
 $('#btnSaveText').addEventListener('click',async()=>{
   if(DIRTY){ st($('#stText'),'작품집에 게시하지 않은 변경이 있어요. 02의 「변경 사항 게시」를 먼저 눌러 주세요.','err'); return; }
@@ -270,12 +272,12 @@ $('#btnSaveText').addEventListener('click',async()=>{
   const summary=$('#tSummary').value.trim(), notice=$('#tNotice').value.trim(), story=$('#tStory').value.replace(/\r/g,'');
   try{
     await readAppsJson(); const a=tApp(); if(!a) throw new Error('앱을 찾지 못했습니다');
-    a.summary=summary; a.notice=notice; const sp=storyPath(a); const files=[];
+    a.summary=summary; a.notice=notice; const fl=tFlags(); a.allowRun=fl.allowRun; a.allowDownload=fl.allowDownload; if(fl.private) a.private=true; else delete a.private; const sp=storyPath(a); const files=[];
     if(story.trim()){ a.story='/'+sp; files.push({path:sp,text:story.replace(/\s+$/,'')+'\n'}); }
     else if(TORIG&&TORIG.story.trim()){ /* 글을 다 지웠으면 파일은 두고 연결만 끊는다 */ a.story=null; }
     files.push({path:'data/apps.json',text:JSON.stringify(APPSJSON,null,2)+'\n'});
-    await commitFiles(`소개 글 수정: ${a.name}`,files,[]);
-    TORIG={summary,notice,story}; TNOTE=''; $('#tSummary').value=summary; $('#tNotice').value=notice;
+    await commitFiles(`소개 글·공개 설정 수정: ${a.name}`,files,[]);
+    TORIG={summary,notice,story,...tFlags()}; TNOTE=''; $('#tSummary').value=summary; $('#tNotice').value=notice;
     st($('#stText'),'게시했습니다. 약 1분 뒤 사이트에 반영돼요. (상세 화면을 다시 열면 보입니다)','ok'); buildAppSel(); renderWorks();
   }catch(e){ st($('#stText'),'실패: '+e.message,'err'); btn.disabled=false; }
 });

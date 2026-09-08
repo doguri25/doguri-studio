@@ -62,7 +62,7 @@ function renderCards(){
     <span class="tab">${a.status==='soon'?'UNWRITTEN':(a.private?'PRIVATE · ':'SEALED · ')+esc(a.num)}</span>
     <div class="photo"><i class="tape l"></i><i class="tape r"></i>${visHTML(a)}<div class="lens" aria-hidden="true">${visHTML(a)}</div></div>
     <div class="meta"><h3><span class="num">${esc(a.num)}</span>${esc(a.name)}</h3><p>${esc(a.summary)}</p><div class="tags">${a.tags.map(t=>`<span>${esc(t)}</span>`).join('')}</div></div>
-    <div class="acts">${a.cardButton==='works'?`<a class="btn gold run" href="/project/${esc(a.slug)}/works" role="button">작품 보기</a>`:runLink(a,'실행','run')}<button type="button" class="btn line dl" ${(a.downloads&&a.downloads.length)||a.private?'':'disabled'}>다운로드</button></div>
+    <div class="acts">${a.cardButton==='works'?`<a class="btn gold run" href="/project/${esc(a.slug)}/works" role="button">작품 보기</a>`:runLink(a,'실행','run')}<button type="button" class="btn line dl" ${canDl(a)||a.private?'':'disabled'} ${a.downloads&&a.downloads.length&&a.allowDownload===false?'title="지금은 내려받을 수 없어요"':''}>다운로드</button></div>
     <span class="stamp" aria-hidden="true">${a.status==='soon'?'아직 봉인 중':a.private?'비공개 · 열람만':'봉인을 뜯어 보세요'}</span>
   </div></article>`).join('');
   $$('.file',grid).forEach(bindCard);
@@ -127,13 +127,16 @@ function slam(text,x,y){ if(reduced)return; const s=document.createElement('span
 function privateNotice(e){ const r=e.currentTarget.getBoundingClientRect(); slam('PRIVATE',r.left+r.width/2,r.top-10); toast('비공개입니다 — 아직 서가 밖으로 나가지 않은 이야기예요.'); }
 /* 실행 버튼은 진짜 링크(<a target=_blank>)다. window.open을 늦게 부르면 팝업 차단기에 막히는 브라우저가 있어서,
    도장 효과만 얹고 새 탭은 브라우저가 링크 그대로 열게 둔다. */
-function runLink(app,label,cls=''){ const ok=!!(app.run&&app.run.url); const priv=!!app.private;
+/* 공개 설정: allowRun / allowDownload 가 false면 버튼을 비활성(관리 화면 04에서 켜고 끈다) */
+const canRun=app=>!!(app.run&&app.run.url)&&app.allowRun!==false;
+const canDl=app=>!!(app.downloads&&app.downloads.length)&&app.allowDownload!==false;
+function runLink(app,label,cls=''){ const ok=canRun(app); const priv=!!app.private;
   return `<a class="btn gold ${cls}" href="${ok?esc(app.run.url):'#'}" ${ok&&!priv?'target="_blank" rel="noopener"':''} ${!(ok||priv)?'aria-disabled="true" tabindex="-1"':''} role="button">${label}</a>`; }
 function runApp(app,e){ /* 링크의 기본 동작(새 탭)은 막지 않고 도장만 찍는다 */
   if(app.private){ e.preventDefault(); privateNotice(e); return; }
-  if(!app||!app.run){ e.preventDefault(); return; }
+  if(!app||!canRun(app)){ e.preventDefault(); return; }
   const r=e.currentTarget.getBoundingClientRect(); slam('OPEN',r.left+r.width/2,r.top-10); }
-function downloadApp(app,e){ if(!app||!app.downloads||!app.downloads.length)return; const r=e.currentTarget.getBoundingClientRect();
+function downloadApp(app,e){ if(!app||!canDl(app))return; const r=e.currentTarget.getBoundingClientRect();
   const idx=e.currentTarget.dataset.i!==undefined?+e.currentTarget.dataset.i:0; const f=app.downloads[idx]||app.downloads[0]; if(!f||!f.file){ toast('아직 파일이 연결되지 않았습니다.'); return; }
   slam('SAVE',r.left+r.width/2,r.top-10); const a=document.createElement('a'); a.href=f.file; if(/^https?:/.test(f.file)&&!f.file.startsWith(location.origin)){ a.target='_blank'; a.rel='noopener'; } else a.download=f.filename||''; document.body.appendChild(a); a.click(); a.remove(); }
 
@@ -163,7 +166,7 @@ function fillDossier(app){
   $('#dPhoto').innerHTML=visHTML(app);
   const acts=$('#dActs');
   if(app.private){ acts.innerHTML=`${runLink(app,'실행')}<button type="button" class="btn line">다운로드</button>`; $('.gold',acts).onclick=e=>{ripple(e);runApp(app,e)}; $$('.line',acts).forEach(b=>b.onclick=e=>{ripple(e);privateNotice(e)}); }
-  else { acts.innerHTML=`${runLink(app,'실행 · 새 탭에서 열기')}${(app.downloads||[]).map((d,i)=>`<button type="button" class="btn line" data-i="${i}">↓ ${esc(d.label)}${d.size?` <small>(${esc(d.size)})</small>`:''}</button>`).join('')}`;
+  else { const dls=canDl(app)?(app.downloads||[]):[]; acts.innerHTML=`${runLink(app,app.run&&app.allowRun===false?'실행 · 지금은 닫혀 있어요':'실행 · 새 탭에서 열기')}${dls.map((d,i)=>`<button type="button" class="btn line" data-i="${i}">↓ ${esc(d.label)}${d.size?` <small>(${esc(d.size)})</small>`:''}</button>`).join('')}${app.downloads&&app.downloads.length&&app.allowDownload===false?'<span class="alt">다운로드는 지금 닫혀 있어요.</span>':''}`;
   $('.gold',acts).onclick=e=>{ripple(e);runApp(app,e)}; $$('.line',acts).forEach(b=>b.onclick=e=>{ripple(e);downloadApp(app,e)}); }
   $('#dAlt').innerHTML=app.altRun?`다른 버전: <a href="${esc(app.altRun.url)}" target="_blank" rel="noopener">${esc(app.altRun.label)}</a>`:'';
   $('#dAlt').hidden=!app.altRun;
@@ -227,7 +230,7 @@ function openGallery(slug,push=true){
   galleryApp=app; $('#gTitle').textContent=app.name+' · 작품집'; $('#gCount').textContent=String(works.length).padStart(2,'0')+' WORKS';
   $('#gLead').textContent=works.length+'편의 작품이 있어요. 표지를 누르면 한 장씩 넘겨 읽을 수 있고, 최근 작품이 앞에 옵니다.';
   $('#gWorks').innerHTML=works.map(workTile).join(''); $$('.work',$('#gWorks')).forEach(el=>el.addEventListener('click',()=>openViewer(works[+el.dataset.i])));
-  $('#gFoot').innerHTML=(app.run&&!app.private?`<a class="btn line" href="${esc(app.run.url)}" target="_blank" rel="noopener">${esc(app.name)} 열기 · 새 탭</a>`:'')+`<button type="button" class="btn line" id="gToStory">이 도구의 이야기 읽기</button><span>표지는 첫 장 · 뷰어에서 ← → 키나 옆으로 밀어서 넘기기</span>`;
+  $('#gFoot').innerHTML=(canRun(app)&&!app.private?`<a class="btn line" href="${esc(app.run.url)}" target="_blank" rel="noopener">${esc(app.name)} 열기 · 새 탭</a>`:'')+`<button type="button" class="btn line" id="gToStory">이 도구의 이야기 읽기</button><span>표지는 첫 장 · 뷰어에서 ← → 키나 옆으로 밀어서 넘기기</span>`;
   $('#gToStory').onclick=()=>{ closeGallery(); if(!current||current.slug!==app.slug){ setTimeout(()=>openCase(app.slug,cardOf(app.slug)),80); } };
   if(gallery.hidden){ gallery.hidden=false; gallery.scrollTop=0; document.body.classList.add('lock'); requestAnimationFrame(()=>{ gallery.classList.add('on'); setTimeout(()=>gallery.classList.add('ready'),80); }); }
   if(push){ history.pushState({view:'works',slug},'','/project/'+encodeURIComponent(slug)+'/works'); galleryPushed=true; } else galleryPushed=false;
