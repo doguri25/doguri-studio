@@ -67,6 +67,35 @@
       "story": "/content/card-novel.md",
       "works": [
         {
+          "slug": "w20260909-fotn",
+          "title": "주파수 72.4",
+          "date": "2026.09",
+          "ratio": "3:4",
+          "blurb": "망상과 현실 사이",
+          "cards": [
+            "/media/card-novel/works/w20260909-fotn/01.webp",
+            "/media/card-novel/works/w20260909-fotn/02.webp",
+            "/media/card-novel/works/w20260909-fotn/03.webp",
+            "/media/card-novel/works/w20260909-fotn/04.webp",
+            "/media/card-novel/works/w20260909-fotn/05.webp",
+            "/media/card-novel/works/w20260909-fotn/06.webp",
+            "/media/card-novel/works/w20260909-fotn/07.webp",
+            "/media/card-novel/works/w20260909-fotn/08.webp",
+            "/media/card-novel/works/w20260909-fotn/09.webp",
+            "/media/card-novel/works/w20260909-fotn/10.webp",
+            "/media/card-novel/works/w20260909-fotn/11.webp",
+            "/media/card-novel/works/w20260909-fotn/12.webp",
+            "/media/card-novel/works/w20260909-fotn/13.webp",
+            "/media/card-novel/works/w20260909-fotn/14.webp",
+            "/media/card-novel/works/w20260909-fotn/15.webp",
+            "/media/card-novel/works/w20260909-fotn/16.webp",
+            "/media/card-novel/works/w20260909-fotn/17.webp",
+            "/media/card-novel/works/w20260909-fotn/18.webp",
+            "/media/card-novel/works/w20260909-fotn/19.webp",
+            "/media/card-novel/works/w20260909-fotn/20.webp"
+          ]
+        },
+        {
           "slug": "dry-umbrella",
           "title": "젖지 않은 우산",
           "date": "2026.09",
