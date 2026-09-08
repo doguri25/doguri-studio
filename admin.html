@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#090a11">
 <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@700;800&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@700;800&family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="/assets/css/site.css">
 <style>
 /* 관리 화면 — 사이트 토큰을 쓰되 효과 없이 담백하게 */
@@ -78,6 +78,21 @@ body{background-image:radial-gradient(ellipse 60% 40% at 90% 0%, rgba(128,112,20
 .done{margin-top:14px;padding:14px 16px;border:1px solid rgba(159,215,166,.4);border-radius:4px;background:rgba(159,215,166,.06);font:400 13.5px/1.7 var(--label);color:var(--paper)}
 .done a{color:var(--gold);text-decoration:none;border-bottom:1px solid rgba(217,177,92,.4)}
 .lock-note{font:400 12px/1.6 var(--label);color:var(--paper-3);margin-top:10px}
+/* 로그인 */
+.login-methods{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;margin-top:6px}
+.login-methods[hidden]{display:none}
+.lm{display:flex;flex-direction:column;gap:8px;min-width:240px}
+.lm[hidden]{display:none}
+.lm .hint{font:400 11.5px/1.5 var(--label);color:var(--paper-3)}
+.lm-or{align-self:flex-start;font:500 11px/1 var(--label);letter-spacing:.2em;color:var(--paper-3);padding:16px 4px 0}
+.lm-or[hidden]{display:none}
+#gsi{min-height:44px}
+.setup{margin-top:16px;padding:14px 16px;border:1px solid rgba(217,177,92,.35);border-left:3px solid var(--gold);border-radius:3px;background:rgba(217,177,92,.06);font:400 13px/1.7 var(--label);color:var(--paper)}
+.setup[hidden]{display:none}
+.setup b{color:var(--gold-2);font-weight:600}
+.setup code{font:400 12px/1 var(--mono);background:rgba(9,10,17,.6);padding:3px 6px;border-radius:3px;color:var(--paper-strong)}
+.setup p+p{margin-top:8px}
+.log{font-family:var(--label)}
 @media (max-width:560px){.witem{grid-template-columns:52px minmax(0,1fr)}.witem .ops{grid-column:1/-1;justify-content:flex-start}}
 </style>
 </head>
@@ -85,16 +100,19 @@ body{background-image:radial-gradient(ellipse 60% 40% at 90% 0%, rgba(128,112,20
 <div class="a-wrap">
   <div class="a-top"><a class="brand" href="/"><i></i>도구리 작업실<small>ADMIN</small></a><a class="home" href="/">← 사이트로</a></div>
 
-  <section class="panel" id="pConnect">
-    <h2><span class="step">01</span>저장소 연결</h2>
-    <p class="desc">이 화면은 서버 없이 GitHub 저장소에 직접 파일을 넣습니다. 처음 한 번 <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub 토큰</a>을 만들어 붙여 넣으면 이 브라우저에만 저장돼요. 만들 때 <b>Repository access → Only select repositories → 사이트 저장소</b>, <b>Permissions → Contents → Read and write</b>만 켜면 됩니다.</p>
-    <div class="fields">
-      <div class="field"><label>GitHub 아이디</label><input id="owner" value="doguri25" autocomplete="off"></div>
-      <div class="field"><label>사이트 저장소 이름</label><input id="repo" value="doguri-studio" autocomplete="off"><span class="hint">vercel에 연결한 저장소. 이름이 다르면 고쳐 주세요.</span></div>
-      <div class="field"><label>브랜치</label><input id="branch" value="main" autocomplete="off"></div>
-      <div class="field wide"><label>토큰 (github_pat_… 또는 ghp_…)</label><input id="token" type="password" autocomplete="off" placeholder="github_pat_…"></div>
+  <section class="panel" id="pLogin">
+    <h2><span class="step">01</span>관리자 확인</h2>
+    <p class="desc" id="loginDesc">관리자만 들어올 수 있는 문입니다. 확인은 서버에서 하고, 저장소 열쇠(GitHub 토큰)는 브라우저로 내려오지 않아요.</p>
+    <div id="loginBox">
+      <div class="login-methods" id="loginMethods" hidden>
+        <div class="lm" id="lmGoogle" hidden><div id="gsi"></div><span class="hint">허용된 구글 계정으로만 열립니다.</span></div>
+        <div class="lm-or" id="lmOr" hidden>또는</div>
+        <div class="lm" id="lmPass" hidden><div class="field"><label>관리자 비밀번호</label><input id="pw" type="password" autocomplete="current-password" placeholder="••••••••••••"></div><div class="row" style="margin-top:10px"><button type="button" class="btn gold" id="btnPw">들어가기</button></div></div>
+      </div>
+      <div class="row"><span class="status" id="stLogin">확인하는 중…</span></div>
     </div>
-    <div class="row"><button type="button" class="btn gold" id="btnConnect">연결</button><button type="button" class="btn line" id="btnForget">이 브라우저에서 토큰 지우기</button><span class="status" id="stConnect"></span></div>
+    <div id="sessionBox" hidden><div class="row" style="margin-top:0"><span class="status ok" id="stSession"></span><button type="button" class="btn line" id="btnLogout">나가기</button></div></div>
+    <div class="setup" id="setup" hidden></div>
   </section>
 
   <section class="panel" id="pWorks" hidden>

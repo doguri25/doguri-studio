@@ -9,7 +9,9 @@
 doguri-studio/
 ├─ index.html              홈 · 이야기 상세(/project/<slug>) · 소개(/about) 를 모두 이 한 장이 처리
 ├─ 404.html                없는 주소
-├─ vercel.json             /project/:slug, /about → index.html 로 연결(rewrite)
+├─ vercel.json             /project/:slug, /about → index.html 로 연결(rewrite) · 캐시 헤더
+├─ admin.html + assets/js/admin.js   관리 화면 (/admin)
+├─ api/admin.js            관리 화면의 서버 쪽 (Vercel 함수) — 로그인 검사 · GitHub 커밋 대행
 ├─ robots.txt, sitemap.xml
 ├─ assets/
 │  ├─ css/site.css         디자인 토큰 + 모든 스타일
@@ -82,16 +84,38 @@ doguri-studio/
 
 ## 관리 화면 (/admin) — 카드소설을 브라우저에서 바로 올리기
 
-`https://doguri-studio.vercel.app/admin` 을 열면 서버 없이 GitHub 저장소에 직접 커밋하는 관리 화면이 나온다. 사진을 넣고 순서를 맞춘 뒤 **게시하기**를 누르면 이미지가 자동으로 줄어(긴 변 1080px, webp) 저장소에 올라가고, Vercel이 다시 배포해 약 1분 뒤 사이트에 나타난다. 올라간 작품의 순서 바꾸기·제목 고치기·지우기도 여기서 한다.
+`https://doguri-studio.vercel.app/admin` 을 열면 관리 화면이 나온다. **관리자만** 들어올 수 있고(구글 로그인 또는 비밀번호), 저장소 열쇠(GitHub 토큰)는 Vercel 서버에만 있어 브라우저로 내려오지 않는다. 사진을 넣고 순서를 맞춘 뒤 **게시하기**를 누르면 이미지가 자동으로 줄어(긴 변 1080px, webp) 저장소에 커밋되고, Vercel이 다시 배포해 약 1분 뒤 사이트에 나타난다. 올라간 작품의 순서 바꾸기·제목 고치기·지우기도 여기서 한다.
 
-처음 한 번 GitHub 토큰이 필요하다.
+구조: 브라우저 → `api/admin.js`(Vercel 서버리스 함수 1개) → GitHub API. 함수가 로그인을 검사하고, 허용된 경로(`media/<앱>/works/**`, `data/apps.json`)에만 쓴다.
 
+### 처음 한 번: Vercel 환경변수
+
+Vercel → 프로젝트 → **Settings → Environment Variables** 에 아래를 넣고, **Deployments → 맨 위 배포 → ⋯ → Redeploy** 한다. (환경변수는 다시 배포해야 반영된다.)
+
+| 이름 | 값 | 필수 |
+|---|---|---|
+| `GITHUB_TOKEN` | GitHub fine-grained 토큰 (아래 만드는 법) | ✅ |
+| `ADMIN_PASSWORD` | 관리자 비밀번호. 12자 이상, 다른 데서 안 쓰는 것 | 로그인 A |
+| `GOOGLE_CLIENT_ID` | 구글 OAuth 클라이언트 ID (`…apps.googleusercontent.com`) | 로그인 B |
+| `ADMIN_EMAIL` | 허용할 구글 계정 (여러 개면 쉼표) | 로그인 B |
+| `GITHUB_REPO` | 기본 `doguri25/doguri-studio` — 다르면 적기 | 선택 |
+| `GITHUB_BRANCH` | 기본 `main` | 선택 |
+
+A(비밀번호)만 넣어도 되고, B(구글)만 넣어도 되고, 둘 다 넣으면 로그인 화면에 둘 다 나온다. **비밀번호로 먼저 시작하고, 나중에 구글을 붙여도 된다.**
+
+**GitHub 토큰 만들기**
 1. GitHub → 오른쪽 위 프로필 → Settings → 맨 아래 **Developer settings** → **Personal access tokens → Fine-grained tokens → Generate new token**
 2. Token name 아무거나, Expiration은 1년 등 넉넉히, **Repository access → Only select repositories → 사이트 저장소(doguri-studio)** 선택
 3. **Permissions → Repository permissions → Contents → Read and write** (다른 건 그대로) → Generate token → 복사
-4. 관리 화면의 토큰 칸에 붙여 넣고 **연결**. 토큰은 이 브라우저(localStorage)에만 저장되고 어디로도 전송되지 않는다(GitHub API 호출에만 쓰임). 다른 기기에서 쓰려면 거기서 다시 붙여 넣으면 된다.
+4. 복사한 값을 Vercel 환경변수 `GITHUB_TOKEN`에 붙여 넣는다. 채팅·메모·코드 어디에도 적지 않는다. 노출됐다 싶으면 GitHub에서 지우고(Delete) 새로 만들어 값을 바꾼다.
 
-토큰이 유출되면 그 저장소 파일을 고칠 수 있으니, 공용 컴퓨터에서는 쓰고 나서 **이 브라우저에서 토큰 지우기**를 누른다. `/admin` 주소 자체는 공개돼 있어도 토큰이 없으면 아무것도 할 수 없다.
+**구글 로그인 붙이기 (선택, 10분)**
+1. [console.cloud.google.com](https://console.cloud.google.com) → 프로젝트 하나 만들기(이름 아무거나)
+2. 왼쪽 메뉴 **API 및 서비스 → OAuth 동의 화면** → User Type **외부** → 앱 이름·지원 이메일만 채우고 저장. 범위는 건너뛰고, **테스트 사용자**에 자기 구글 계정 추가 (게시하지 않아도 테스트 사용자는 로그인된다)
+3. **사용자 인증 정보 → 사용자 인증 정보 만들기 → OAuth 클라이언트 ID** → 유형 **웹 애플리케이션** → **승인된 JavaScript 원본**에 `https://doguri-studio.vercel.app` 추가 (로컬 시험도 하려면 `http://localhost:3000`도) → 만들기 → **클라이언트 ID** 복사
+4. Vercel 환경변수 `GOOGLE_CLIENT_ID`에 클라이언트 ID, `ADMIN_EMAIL`에 자기 구글 계정을 넣고 Redeploy
+
+로그인하면 12시간짜리 세션이 그 브라우저에 남는다(`localStorage`의 `dgr-admin-session`). **나가기**를 누르면 지워진다. 비밀번호를 바꾸거나 토큰을 바꾸면 기존 세션은 모두 무효가 된다.
 
 ## 로컬에서 보기
 
@@ -103,6 +127,7 @@ npx serve -s .
 
 `-s`(single-page) 옵션이 있어야 `/project/<slug>` 주소가 index.html로 연결된다. 그런 다음 `http://localhost:3000` 열기.
 간단히 볼 때는 `http://localhost:3000/?id=nooneleft` 처럼 `?id=` 로도 상세를 열 수 있다.
+관리 화면(`/admin`)은 서버 함수(`api/admin.js`)가 있어야 해서 `serve`로는 로그인이 안 된다. 굳이 로컬에서 보려면 `npx vercel dev`(환경변수는 `.env.local`에) — 보통은 배포된 주소에서 쓰면 된다.
 
 ## 배포 (처음 한 번)
 
@@ -115,7 +140,7 @@ npx serve -s .
 ## 아직 비어 있는 자리
 
 - `site.feedbackForm` — 구글 폼 주소 (비어 있으면 "준비 중" 안내)
-- 탐정게임 윈도우 zip — GitHub Releases에 올린 뒤 `downloads`에 주소 추가
+- 탐정게임 — 지금은 `private: true`로 비공개(실행·다운로드 누르면 "비공개입니다"). 공개할 때 `apps/nooneleft/README.md` 참고
 - 아침 책상 — 지금은 claude.ai 아티팩트로 연결(external). 공개 API로 갱신을 다시 만들면 `apps/morning-desk/`에 넣고 hosted로 전환
 - 스크린샷은 사이트 안 앱을 그대로 찍은 것. 더 좋은 장면이 있으면 `media/<slug>/`의 파일만 바꾸면 됨
 
@@ -123,4 +148,5 @@ npx serve -s .
 
 - 봉인 편지 인트로는 브라우저에 `dgr-intro-seen`을 남겨 **처음 한 번만** 나온다. 다시 보려면 개발자 도구에서 localStorage를 지우거나 시크릿 창으로 연다.
 - 「움직임 줄이기」를 켠 기기에서는 인트로·입자·안개·틸트가 모두 꺼진다.
-- 서체는 Google Fonts(Nanum Myeongjo, Noto Sans KR, IBM Plex Mono — OFL)에서 불러온다.
+- 서체는 Google Fonts(Nanum Myeongjo, Noto Sans KR, IBM Plex Mono — OFL)에서 불러온다. IBM Plex Mono는 영문·숫자 라벨(No. 01, SEALED, 날짜)에만 쓰고, 한글이 섞이는 글은 전부 Noto Sans KR(`--label`)이다.
+- `assets/`·`data/`는 브라우저가 매번 서버에 새 버전을 묻도록(`max-age=0, must-revalidate`) 해 두었다. 배포 뒤에도 옛 화면이 보이면 한 번만 강력 새로고침(Ctrl+F5 / 모바일은 탭 닫고 다시 열기)하면 된다.

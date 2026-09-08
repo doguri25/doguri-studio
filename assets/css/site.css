@@ -18,8 +18,8 @@
   --tape:rgba(226,214,180,.28);
   --serif:'Nanum Myeongjo','Noto Serif KR',Georgia,serif;
   --sans:'Noto Sans KR',system-ui,-apple-system,sans-serif;
-  --mono:'IBM Plex Mono','IBM Plex Sans KR','Noto Sans KR',ui-monospace,SFMono-Regular,Menlo,monospace;
-  --label:'IBM Plex Sans KR','Noto Sans KR',system-ui,-apple-system,sans-serif;   /* 한글 라벨·버튼·칩 */
+  --mono:'IBM Plex Mono','Noto Sans KR',ui-monospace,SFMono-Regular,Menlo,monospace;   /* 영문·숫자 라벨 전용 (한글이 섞이는 곳엔 쓰지 않는다) */
+  --label:'Noto Sans KR',system-ui,-apple-system,sans-serif;   /* 한글 라벨·버튼·칩·푸터·집계 */
   --x:50vw; --y:38vh;      /* 촛불 위치 */
   --ease:cubic-bezier(.2,.8,.2,1);
   --pop:cubic-bezier(.2,1.5,.35,1);
@@ -225,8 +225,8 @@ body.go .hero p.lead,body.go .hero .cta{animation:fade .9s .55s var(--ease) both
 .mist{position:absolute;left:0;right:0;bottom:0;height:200px;pointer-events:none;z-index:4;overflow:hidden;background:linear-gradient(transparent, rgba(9,10,17,.6) 60%, var(--ink));opacity:.9}
 .mist::before{content:"";position:absolute;left:-10%;right:-10%;bottom:-40px;height:160px;background:radial-gradient(ellipse at 30% 100%, var(--fog), transparent 60%),radial-gradient(ellipse at 75% 100%, rgba(217,221,233,.12), transparent 60%);filter:blur(24px);animation:driftA 30s ease-in-out infinite alternate}
 
-/* 카드 안 벡터 그림 */
-.art{position:absolute;inset:0;overflow:hidden}
+/* 카드 안 벡터 그림 — 사진(.vis img, z-index:3)이 있으면 항상 그 아래에 깔린다 (z-index:1로 자체 쌓임 맥락) */
+.art{position:absolute;inset:0;overflow:hidden;z-index:1}
 .art.cards{background:radial-gradient(ellipse at 80% 20%, rgba(217,177,92,.35), transparent 55%),linear-gradient(160deg,#2a1f2e,#14121a)}
 .art.cards i{position:absolute;left:50%;top:50%;width:34%;height:70%;border:1px solid rgba(230,226,218,.55);background:linear-gradient(160deg,#211c27,#15121a);border-radius:4px;
   transform:translate(-50%,-50%) rotate(var(--a)) translateX(var(--o));transition:transform .6s var(--pop);box-shadow:0 8px 20px rgba(0,0,0,.5)}

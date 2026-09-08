@@ -1,56 +1,83 @@
 /* 도구리 작업실 — admin.js
-   서버 없이 GitHub API로 저장소에 직접 커밋한다. 토큰은 이 브라우저(localStorage)에만 남는다.
-   흐름: 연결 → apps.json 읽기 → 작품 편집/새 작품 → 이미지 축소 → 블롭 업로드 → 트리·커밋 1개 → 브랜치 갱신 → Vercel 자동 배포 → 사이트에서 확인 */
+   브라우저는 /api/admin 하고만 이야기한다. GitHub 토큰은 Vercel 환경변수에만 있고 여기엔 없다.
+   흐름: 로그인(구글 또는 비밀번호) → 세션 토큰(12시간, localStorage) → apps.json 읽기 → 작품 편집/새 작품
+        → 이미지 축소 → 블롭 업로드(장당 1요청) → 커밋 1개 → Vercel 자동 배포 → 사이트에서 확인 */
 (() => {
 'use strict';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const store={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
-const API='https://api.github.com';
-let CFG={owner:'',repo:'',branch:'main',token:''};
-let APPSJSON=null, APPS_SHA=null, SEL='card-novel', DIRTY=false;
+const SKEY='dgr-admin-session';
+let CFG=null;                // /api/admin?op=config
+let SESSION=null;            // {token, exp, who}
+let APPSJSON=null, SEL='card-novel', DIRTY=false;
 let NEW=[]; // {id,file,name,url(blob preview)}
 
-/* ═══════════════ GitHub API ═══════════════ */
-async function gh(path,opts={}){
-  const r=await fetch(API+path,{...opts,headers:{'Authorization':'Bearer '+CFG.token,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28',...(opts.body?{'Content-Type':'application/json'}:{}),...(opts.headers||{})}});
-  if(!r.ok){ let m=''; try{ m=(await r.json()).message||''; }catch(e){} throw new Error(`${r.status} ${m||r.statusText}`); }
-  return r.status===204?null:r.json();
+/* ═══════════════ API ═══════════════ */
+async function api(op,body,opts={}){
+  const r=await fetch('/api/admin?op='+encodeURIComponent(op),{method:body?'POST':'GET',headers:{...(body?{'Content-Type':'application/json'}:{}),...(SESSION&&!opts.noAuth?{'Authorization':'Bearer '+SESSION.token}:{})},body:body?JSON.stringify(body):undefined,cache:'no-store'});
+  let j={}; try{ j=await r.json(); }catch(e){}
+  if(!r.ok){ if(r.status===401&&SESSION&&!opts.noAuth){ logout('세션이 끝났어요. 다시 들어와 주세요.'); } throw new Error(j.error||`${r.status} ${r.statusText}`); }
+  return j;
 }
-const repoPath=()=>`/repos/${CFG.owner}/${CFG.repo}`;
-function b64ToUtf8(b64){ const bin=atob(b64.replace(/\n/g,'')); const bytes=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i); return new TextDecoder().decode(bytes); }
-async function readAppsJson(){ const j=await gh(`${repoPath()}/contents/data/apps.json?ref=${encodeURIComponent(CFG.branch)}`); APPS_SHA=j.sha; APPSJSON=JSON.parse(b64ToUtf8(j.content)); }
-async function listDir(path){ try{ const j=await gh(`${repoPath()}/contents/${path}?ref=${encodeURIComponent(CFG.branch)}`); return Array.isArray(j)?j:[]; }catch(e){ return []; } }
-/* 파일 여러 개 + apps.json 을 커밋 하나로 */
+async function readAppsJson(){ const j=await api('apps',{}); APPSJSON=JSON.parse(j.text); }
+/* 파일 여러 개 + apps.json 을 커밋 하나로: 이미지는 장당 블롭 1요청, 나머지는 서버가 트리·커밋 처리 */
 async function commitFiles(message, files /* [{path, base64|text}] */, deletions /* [path] */, onProgress){
-  const ref=await gh(`${repoPath()}/git/ref/heads/${encodeURIComponent(CFG.branch)}`); const headSha=ref.object.sha;
-  const head=await gh(`${repoPath()}/git/commits/${headSha}`); const baseTree=head.tree.sha;
-  const tree=[]; let done=0;
-  for(const f of files){ const blob=await gh(`${repoPath()}/git/blobs`,{method:'POST',body:JSON.stringify(f.base64?{content:f.base64,encoding:'base64'}:{content:f.text,encoding:'utf-8'})}); tree.push({path:f.path,mode:'100644',type:'blob',sha:blob.sha}); done++; onProgress&&onProgress(done,files.length,f.path); }
-  for(const p of (deletions||[])) tree.push({path:p,mode:'100644',type:'blob',sha:null});
-  const newTree=await gh(`${repoPath()}/git/trees`,{method:'POST',body:JSON.stringify({base_tree:baseTree,tree})});
-  const commit=await gh(`${repoPath()}/git/commits`,{method:'POST',body:JSON.stringify({message,tree:newTree.sha,parents:[headSha]})});
-  await gh(`${repoPath()}/git/refs/heads/${encodeURIComponent(CFG.branch)}`,{method:'PATCH',body:JSON.stringify({sha:commit.sha,force:false})});
-  return commit.sha;
+  const out=[]; let done=0; const imgs=files.filter(f=>f.base64);
+  for(const f of files){
+    if(f.base64){ const b=await api('blob',{base64:f.base64}); out.push({path:f.path,sha:b.sha}); done++; onProgress&&onProgress(done,imgs.length,f.path); }
+    else out.push({path:f.path,text:f.text});
+  }
+  const c=await api('commit',{message,files:out,deletions:deletions||[]});
+  return c.sha;
 }
 
-/* ═══════════════ 연결 ═══════════════ */
+/* ═══════════════ 로그인 ═══════════════ */
 const st=(el,msg,cls)=>{ el.textContent=msg; el.className='status'+(cls?' '+cls:''); };
-function loadCfg(){ try{ const c=JSON.parse(store.get('dgr-admin')||'{}'); if(c.owner) $('#owner').value=c.owner; if(c.repo) $('#repo').value=c.repo; if(c.branch) $('#branch').value=c.branch; if(c.token) $('#token').value=c.token; }catch(e){} }
-async function connect(){
-  CFG={owner:$('#owner').value.trim(),repo:$('#repo').value.trim(),branch:$('#branch').value.trim()||'main',token:$('#token').value.trim()};
-  if(!CFG.owner||!CFG.repo||!CFG.token){ st($('#stConnect'),'아이디·저장소·토큰을 모두 적어 주세요.','err'); return; }
-  st($('#stConnect'),'확인하는 중…');
-  try{
-    const r=await gh(repoPath()); await readAppsJson();
-    store.set('dgr-admin',JSON.stringify(CFG));
-    st($('#stConnect'),`연결됨 · ${r.full_name} (${r.private?'비공개':'공개'}) · 앱 ${APPSJSON.apps.length}개`,'ok');
-    $('#pWorks').hidden=false; $('#pNew').hidden=false; buildAppSel(); renderWorks();
-  }catch(e){ st($('#stConnect'),'연결 실패: '+e.message+(/401|403/.test(e.message)?' — 토큰 권한(Contents: Read and write)과 저장소 선택을 확인해 주세요.':/404/.test(e.message)?' — 아이디·저장소 이름을 확인해 주세요.':''),'err'); }
+function loadSession(){ try{ const s=JSON.parse(store.get(SKEY)||'null'); if(s&&s.token&&s.exp>Date.now()+60000) SESSION=s; }catch(e){} }
+function showSetup(){
+  const box=$('#setup'); const notes=(CFG&&CFG.notes)||[];
+  if(!notes.length){ box.hidden=true; return; }
+  box.hidden=false; box.innerHTML=`<p><b>아직 설정이 덜 됐어요.</b></p>${notes.map(n=>`<p>· ${esc(n)}</p>`).join('')}<p>Vercel → 프로젝트 → <b>Settings → Environment Variables</b>에 넣고 <b>Redeploy</b> 하면 됩니다. 자세한 순서는 저장소의 README「관리 화면」에 있어요.</p>`;
 }
-$('#btnConnect').addEventListener('click',connect);
-$('#token').addEventListener('keydown',e=>{ if(e.key==='Enter') connect(); });
-$('#btnForget').addEventListener('click',()=>{ store.del('dgr-admin'); $('#token').value=''; st($('#stConnect'),'이 브라우저에서 토큰을 지웠습니다.'); $('#pWorks').hidden=true; $('#pNew').hidden=true; });
+function mountGoogle(clientId){
+  const box=$('#lmGoogle'); box.hidden=false;
+  const s=document.createElement('script'); s.src='https://accounts.google.com/gsi/client'; s.async=true; s.defer=true;
+  s.onload=()=>{ try{
+    google.accounts.id.initialize({client_id:clientId,callback:r=>login({credential:r.credential}),ux_mode:'popup',auto_select:false,itp_support:true,use_fedcm_for_prompt:true});
+    google.accounts.id.renderButton($('#gsi'),{theme:'filled_black',size:'large',text:'signin_with',shape:'rectangular',width:260,locale:'ko'});
+  }catch(e){ st($('#stLogin'),'구글 버튼을 만들지 못했습니다: '+e.message,'err'); } };
+  s.onerror=()=>{ $('#gsi').innerHTML='<span class="hint">구글 로그인 스크립트를 불러오지 못했습니다. 네트워크를 확인해 주세요.</span>'; };
+  document.head.appendChild(s);
+}
+async function login(body){
+  st($('#stLogin'),'확인하는 중…');
+  try{ const s=await api('login',body,{noAuth:true}); SESSION={token:s.token,exp:s.exp,who:s.who}; store.set(SKEY,JSON.stringify(SESSION)); await enter(); }
+  catch(e){ st($('#stLogin'),e.message,'err'); }
+}
+$('#btnPw').addEventListener('click',()=>{ const v=$('#pw').value; if(!v){ st($('#stLogin'),'비밀번호를 적어 주세요.','err'); $('#pw').focus(); return; } login({password:v}); });
+$('#pw').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#btnPw').click(); });
+function logout(msg){ SESSION=null; store.del(SKEY); $('#sessionBox').hidden=true; $('#loginBox').hidden=false; $('#pWorks').hidden=true; $('#pNew').hidden=true; $('#pw').value=''; st($('#stLogin'),msg||'나왔습니다.'); }
+$('#btnLogout').addEventListener('click',()=>logout());
+async function enter(){
+  try{
+    await readAppsJson();
+    $('#loginBox').hidden=true; $('#sessionBox').hidden=false;
+    const until=new Date(SESSION.exp); const hh=String(until.getHours()).padStart(2,'0'), mm=String(until.getMinutes()).padStart(2,'0');
+    st($('#stSession'),`들어왔습니다 · ${SESSION.who==='google'?'구글 계정':'비밀번호'} · ${CFG.repo} (${CFG.branch}) · 앱 ${APPSJSON.apps.length}개 · ${hh}:${mm}까지 유효`,'ok');
+    $('#pWorks').hidden=false; $('#pNew').hidden=false; buildAppSel(); renderWorks();
+  }catch(e){ st($('#stLogin'),'들어가지 못했습니다: '+e.message,'err'); if(!SESSION) return; }
+}
+async function boot(){
+  try{ CFG=await api('config'); }catch(e){ st($('#stLogin'),'관리 서버(/api/admin)에 닿지 못했습니다: '+e.message+' — Vercel에 api/ 폴더까지 올라갔는지 확인해 주세요.','err'); return; }
+  showSetup();
+  const canGoogle=!!CFG.google, canPw=!!CFG.password;
+  $('#loginMethods').hidden=!(canGoogle||canPw); $('#lmPass').hidden=!canPw; $('#lmOr').hidden=!(canGoogle&&canPw);
+  if(canGoogle) mountGoogle(CFG.google);
+  loadSession();
+  if(SESSION){ st($('#stLogin'),'지난 로그인을 이어가는 중…'); await enter(); }
+  else st($('#stLogin'),(canGoogle||canPw)?'':'로그인 방법이 아직 없습니다.');
+}
 
 /* ═══════════════ 작품 목록 ═══════════════ */
 function buildAppSel(){ const s=$('#appSel'); s.innerHTML=APPSJSON.apps.filter(a=>a.status!=='soon').map(a=>`<option value="${esc(a.slug)}">${esc(a.name)}</option>`).join(''); if(![...s.options].some(o=>o.value===SEL)) SEL=s.options[0]?.value||''; s.value=SEL; }
@@ -130,7 +157,7 @@ $('#btnPublish').addEventListener('click',async()=>{
     const cur=app(); cur.works=cur.works||[]; cur.works.push({slug,title,date,ratio,blurb,cards:paths});
     files.push({path:'data/apps.json',text:JSON.stringify(APPSJSON,null,2)+'\n'});
     log('저장소에 올리는 중…');
-    const sha=await commitFiles(`작품 추가: ${title} (${a.name})`,files,[],(d,n,p)=>{ fill.style.width=(32+60*d/n)+'%'; });
+    const sha=await commitFiles(`작품 추가: ${title} (${a.name})`,files,[],(d,n,p)=>{ fill.style.width=(32+60*d/n)+'%'; log(`  올림 ${d}/${n}`); });
     log(`커밋 완료 ${sha.slice(0,7)} · Vercel이 배포하는 중 (보통 30초~1분)`); fill.style.width='94%';
     // 사이트에 반영됐는지 확인
     let seen=false; for(let k=0;k<24&&!seen;k++){ await new Promise(r=>setTimeout(r,8000)); try{ const j=await (await fetch('/data/apps.json?_='+Date.now(),{cache:'no-store'})).json(); seen=!!(j.apps.find(x=>x.slug===a.slug)?.works||[]).find(w=>w.slug===slug); }catch(e){} log(seen?'사이트에 반영됐습니다.':`  아직 배포 중… (${(k+1)*8}초)`); }
@@ -142,7 +169,6 @@ $('#btnPublish').addEventListener('click',async()=>{
 });
 
 /* ═══════════════ 시작 ═══════════════ */
-loadCfg();
 (function(){ const d=new Date(); $('#wDate').value=`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}`; })();
-if($('#token').value) connect();
+boot();
 })();
