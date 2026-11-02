@@ -12,6 +12,11 @@ const motionPref=(()=>{ try{ return localStorage.getItem('dgr-motion'); }catch(e
 const reduced=motionPref==='off';
 document.documentElement.classList.toggle('reduce',reduced);
 const fine=matchMedia('(hover:hover) and (pointer:fine)').matches;
+/* 포커스 테두리는 키보드(Tab)로 움직일 때만: 마우스·터치로 누르거나 화면을 열고 닫으며 스크립트가 포커스를 옮길 때
+   브라우저가 금색 테두리를 띄우던 것(「가끔 버튼에 두꺼운 주황 테두리」). html[data-input]을 보고 site.css가 숨긴다 */
+document.documentElement.dataset.input='pointer';
+addEventListener('keydown',e=>{ if(e.key==='Tab') document.documentElement.dataset.input='keyboard'; },true);
+addEventListener('pointerdown',()=>{ document.documentElement.dataset.input='pointer'; },{capture:true,passive:true});
 const toast=(msg)=>{const t=$('#toast');t.textContent=msg;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2600);};
 const store={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');

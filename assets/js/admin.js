@@ -7,6 +7,11 @@
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const store={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
+/* 포커스 테두리는 키보드(Tab)로 움직일 때만: 마우스·터치로 누르거나 화면을 열고 닫으며 스크립트가 포커스를 옮길 때
+   브라우저가 금색 테두리를 띄우던 것(「가끔 버튼에 두꺼운 주황 테두리」). html[data-input]을 보고 site.css가 숨긴다 */
+document.documentElement.dataset.input='pointer';
+addEventListener('keydown',e=>{ if(e.key==='Tab') document.documentElement.dataset.input='keyboard'; },true);
+addEventListener('pointerdown',()=>{ document.documentElement.dataset.input='pointer'; },{capture:true,passive:true});
 const SKEY='dgr-admin-session';
 let CFG=null;                // /api/admin?op=config
 let SESSION=null;            // {token, exp, who}
@@ -125,7 +130,9 @@ function qnavInit(){
 }
 
 /* ═══════════════ 작품 목록 ═══════════════ */
-function buildAppSel(){ const s=$('#appSel'); s.innerHTML=APPSJSON.apps.filter(a=>a.status!=='soon').map(a=>`<option value="${esc(a.slug)}">${esc(a.name)}</option>`).join(''); if(![...s.options].some(o=>o.value===SEL)) SEL=s.options[0]?.value||''; s.value=SEL; }
+/* 앱 선택 상자는 최신(올린 날짜)이 위로 — 새로 올린 앱을 고칠 일이 가장 많다. 「쓰는 중」은 맨 아래 */
+const newestFirst=list=>list.map((a,i)=>({a,i})).sort((x,y)=>((x.a.status==='soon')-(y.a.status==='soon'))||((Date.parse(y.a.added||'')||0)-(Date.parse(x.a.added||'')||0))||(y.i-x.i)).map(x=>x.a);
+function buildAppSel(){ const s=$('#appSel'); s.innerHTML=newestFirst(APPSJSON.apps.filter(a=>a.status!=='soon')).map(a=>`<option value="${esc(a.slug)}">${esc(a.name)}</option>`).join(''); if(![...s.options].some(o=>o.value===SEL)) SEL=s.options[0]?.value||''; s.value=SEL; }
 $('#appSel').addEventListener('change',e=>{ if(DIRTY&&!confirm('게시하지 않은 변경이 있어요. 버리고 넘어갈까요?')){ e.target.value=SEL; return; } SEL=e.target.value; discardWorks(); renderWorks(); });
 const app=()=>APPSJSON.apps.find(a=>a.slug===SEL);
 const ratioAR=r=>{ const m=String(r||'1:1').split(':'); return `${parseFloat(m[0])||1}/${parseFloat(m[1])||1}`; };
@@ -268,7 +275,7 @@ $('#btnPublish').addEventListener('click',async()=>{
 let TSEL='', TORIG=null, TLOADING=false, TNOTE='';
 const tApp=()=>APPSJSON.apps.find(a=>a.slug===TSEL);
 const storyPath=a=>(a.story?a.story.replace(/^\//,''):`content/${a.slug}.md`);
-function buildTextSel(){ const s=$('#tAppSel'); s.innerHTML=APPSJSON.apps.map(a=>`<option value="${esc(a.slug)}">${esc(a.name)}${a.status==='soon'?' (쓰는 중)':''}</option>`).join(''); if(![...s.options].some(o=>o.value===TSEL)) TSEL=SEL||s.options[0]?.value||''; s.value=TSEL; const ts=$('#tShots'); if(ts) ts.href='/shots?app='+encodeURIComponent(TSEL); }
+function buildTextSel(){ const s=$('#tAppSel'); s.innerHTML=newestFirst(APPSJSON.apps).map(a=>`<option value="${esc(a.slug)}">${esc(a.name)}${a.status==='soon'?' (쓰는 중)':''}</option>`).join(''); if(![...s.options].some(o=>o.value===TSEL)) TSEL=SEL||s.options[0]?.value||''; s.value=TSEL; const ts=$('#tShots'); if(ts) ts.href='/shots?app='+encodeURIComponent(TSEL); }
 const tFlags=()=>({allowRun:$('#tAllowRun').checked,allowDownload:$('#tAllowDl').checked,private:$('#tPrivate').checked});
 function textDirty(){ if(!TORIG) return false; const f=tFlags(); return $('#tSummary').value!==TORIG.summary||$('#tNotice').value!==TORIG.notice||$('#tStory').value!==TORIG.story||f.allowRun!==TORIG.allowRun||f.allowDownload!==TORIG.allowDownload||f.private!==TORIG.private; }
 function textState(){ const d=textDirty(); $('#btnSaveText').disabled=!d||TLOADING; if(!TLOADING) st($('#stText'),d?'고친 내용이 있어요. 저장하고 게시를 누르면 반영됩니다.':TNOTE); }
