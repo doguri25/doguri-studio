@@ -2,4 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /api/
+Disallow: /shots
+Disallow: /_build.json
 Sitemap: https://doguri-studio.vercel.app/sitemap.xml

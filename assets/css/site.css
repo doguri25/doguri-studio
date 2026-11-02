@@ -185,6 +185,7 @@ a.btn{text-decoration:none;cursor:pointer;-webkit-user-drag:none}
 .more-wrap[hidden]{display:none}
 .more-wrap .btn{padding:13px 26px;font-size:14px;letter-spacing:.02em}
 .board-head .count:empty{min-height:1.6em}  /* 집계가 채워지기 전에도 한 줄 자리 */
+.board-head .count .seg{white-space:nowrap}
 .board-head .count b{color:var(--paper);font-weight:500}
 .chips{display:flex;gap:8px;flex-wrap:wrap;padding:18px 0 8px}
 .chips:empty{min-height:59px}  /* 칩이 채워지기 전에도 칩 줄 높이를 잡아 둔다 — 아래 서가가 뒤늦게 밀려 내려가지 않게(폰은 두 줄, 아래 미디어 쿼리) */
@@ -195,6 +196,15 @@ a.btn{text-decoration:none;cursor:pointer;-webkit-user-drag:none}
 .chip.on{color:#14120f;border-color:var(--gold)}
 .chip.on::before{transform:scaleX(1)}
 .chip .n{opacity:.55;margin-left:6px;font:500 11px/1 var(--mono);font-variant-numeric:tabular-nums}
+/* 폰·작은 태블릿: 칩을 한 줄로 두고 옆으로 밀어 본다 — 태그가 17개로 늘어 다섯 줄을 차지하며 서가를 밀어내던 것.
+   서가의 좌우 여백만큼 바깥으로 넓혀 화면 끝까지 밀리게 하고, 양 끝은 흐리게 */
+@media (max-width:760px){
+  .chips{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;
+    margin-inline:calc(-1 * clamp(18px,4vw,56px));padding-inline:clamp(18px,4vw,56px);scroll-padding-inline:clamp(18px,4vw,56px);
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 16px,#000 calc(100% - 18px),transparent);mask-image:linear-gradient(90deg,transparent,#000 16px,#000 calc(100% - 18px),transparent)}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:none}
+}
 .board-wrap{position:relative}
 .thread{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:visible}
 .thread path{fill:none;stroke:var(--gold);stroke-width:1;stroke-linecap:round;opacity:.55;stroke-dasharray:3 6}
@@ -471,7 +481,7 @@ html.reduce .dossier .st,html.reduce .about .st{opacity:1;transform:none}
 .fx:hover{color:var(--gold-2);border-color:var(--gold)}
 .fx b{font:400 13px/1 var(--serif);color:var(--gold)}
 html.reduce .fx b{color:var(--paper-3)}
-@media (max-width:560px){ .fx span{display:none} .fx{padding:8px 9px} .chips:empty{min-height:100px} }
+@media (max-width:560px){ .fx span{display:none} .fx{padding:8px 9px} }
 
 /* ───────────────────────── 실제 스크린샷 · 마크다운 · 로딩 ───────────────────────── */
 .vis{position:absolute;inset:0}

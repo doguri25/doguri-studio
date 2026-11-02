@@ -17,7 +17,7 @@ module.exports = async function handler(req, res) {
     const rows = await r.json();
     const isJson = /\.json$/.test(p);
     res.setHeader('Content-Type', isJson ? 'application/json; charset=utf-8' : 'text/markdown; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=10, stale-while-revalidate=60');
+    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=86400');   // 앞단 60초 보관 + 이후 하루는 먼저 보여 주고 뒤에서 갱신(관리 화면 게시는 1분 안에 반영)
     res.setHeader('X-Content-Type-Options', 'nosniff');
     if (!rows.length) { res.statusCode = isJson ? 200 : 404; return res.end(isJson ? '{"apps":{}}' : ''); }   // overrides가 없으면 빈 덮어쓰기
     res.setHeader('Last-Modified', new Date(rows[0].updated_at).toUTCString());

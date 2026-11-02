@@ -11,20 +11,20 @@ doguri-studio/
 ├─ 404.html                없는 주소
 ├─ vercel.json             빌드 명령·출력 폴더(public) · /project/:slug 등 → index.html · /data/overrides.json·/content/*.md → api/content · /media/* 없으면 Supabase 저장소 · 캐시 헤더
 ├─ admin.html + assets/js/admin.js   관리 화면 (/admin)
-├─ build.mjs               Vercel 빌드 — 저장소 파일 + Supabase 덮어쓰기·패치 → public/ (package.json의 build)
+├─ build.mjs               Vercel 빌드 — 저장소 파일 + Supabase 덮어쓰기(·새 패치) → 이야기별 공유 페이지 → 스탬프 → public/
 ├─ package.json            빌드 명령·Node 버전만 (의존성 없음)
 ├─ api/admin.js            관리 화면의 서버 쪽 (Vercel 함수) — 로그인 검사 · Supabase에 저장 대행
 ├─ api/content.js          작품집·소개(overrides.json)와 이야기 글(content/*.md)을 Supabase에서 실시간으로 내보냄
 ├─ robots.txt, sitemap.xml
 ├─ site.webmanifest        홈 화면에 추가할 때의 이름·아이콘·색
-├─ tools/stamp.py           배포 전 캐시 스탬프(?v=) 갱신 · tools/make-zip.sh  배포 zip(관리 화면 소유 파일 제외)
+├─ tools/stamp.py           로컬에서 볼 때 캐시 스탬프(?v=) 갱신 (배포 때는 build.mjs가 알아서 찍는다)
 ├─ assets/
 │  ├─ css/site.css         디자인 토큰 + 모든 스타일
 │  ├─ js/site.js           apps.json 읽기 · 카드 · 필터 · 상세 전환 · 효과
 │  └─ img/                 favicon.svg, og.jpg(링크 공유 미리보기), apple-touch-icon.png·icon-192/512·icon-maskable-512(홈 화면 아이콘)
 ├─ data/
 │  ├─ apps.json            ★ 앱 목록 기본값(코드와 함께 배포)
-│  └─ overrides.json       관리 화면이 쓰는 덮어쓰기(작품집·소개·고정·공개 설정) — zip에 안 들어감
+│  └─ overrides.json       예전 시드 — 실제 덮어쓰기(작품집·소개·고정·공개 설정)는 Supabase에 있다(관리 화면이 씀)
 ├─ content/
 │  └─ <slug>.md            앱별 「이 이야기의 시작」(마크다운)
 ├─ media/
@@ -97,7 +97,7 @@ doguri-studio/
 
 ## 관리 화면 (/admin) — 카드소설을 브라우저에서 바로 올리기
 
-`https://doguri-studio.vercel.app/admin` 을 열면 관리 화면이 나온다. **관리자만** 들어올 수 있고(구글 로그인 또는 비밀번호), 저장소 열쇠(Supabase 서비스 키)는 Vercel 서버에만 있어 브라우저로 내려오지 않는다. 사진을 넣고 순서를 맞춘 뒤 **게시하기**를 누르면 이미지가 자동으로 줄어(긴 변 1080px, webp) Supabase에 올라가고, **배포 없이 몇 초 뒤** 사이트에 나타난다. 올라간 작품의 순서 바꾸기·제목 고치기·지우기도 여기서 한다. 스크린샷·대표 이미지는 `/shots`(폰에서 사진첩으로 올리기)에서.
+`https://doguri-studio.vercel.app/admin` 을 열면 관리 화면이 나온다. **관리자만** 들어올 수 있고(구글 로그인 또는 비밀번호), 저장소 열쇠(Supabase 서비스 키)는 Vercel 서버에만 있어 브라우저로 내려오지 않는다. 사진을 넣고 순서를 맞춘 뒤 **게시하기**를 누르면 이미지가 자동으로 줄어(긴 변 1080px, webp) Supabase에 올라가고, **배포 없이 1분 안에** 사이트에 나타난다. 올라간 작품의 순서 바꾸기·제목 고치기·지우기도 여기서 한다. 스크린샷·대표 이미지는 `/shots`(폰에서 사진첩으로 올리기)에서.
 
 구조: 브라우저 → `api/admin.js`(Vercel 서버리스 함수) → Supabase. 함수가 로그인을 검사하고, 허용된 경로(`media/<앱>/**` 이미지 → 스토리지 `site` 버킷, `data/overrides.json`·`content/<앱>.md` → 표 `site_content`)에만 쓴다. 사이트는 그걸 `api/content.js`와 `/media/*` 연결로 바로 읽는다. 게시 기록은 표 `publish_log`에 남는다.
 
@@ -146,32 +146,33 @@ A(비밀번호)만 넣어도 되고, B(구글)만 넣어도 되고, 둘 다 넣�
 
 1. **기준 파일** — 받아 온 저장소 파일 그대로(`api/`·`tools/`·`README.md`·`build.mjs`·`package.json`·`vercel.json`은 공개 파일에서 뺀다)
 2. **Supabase 덮어쓰기** — 표 `site_files`의 파일을 그 위에 덮는다(예: `shots.html`, 새 앱 대표 이미지)
-3. **Supabase 패치** — 표 `site_patches`의 **찾아 바꾸기**를 순서대로 적용한다(새 앱 카드 추가, 서가 쪽수·더 보기, 관리 화면 문구 등). 찾을 문자열이 정확히 한 번 있어야 붙고, 못 찾으면 그 패치만 건너뛰고 빌드 로그에 `patch #N skip`이 남는다
-4. `data/overrides.json`·`content/*.md`는 공개 파일에서 빼고 `api/content.js`가 Supabase(표 `site_content`)에서 실시간으로 내보낸다. `/media/*` 중 저장소에 없는 파일은 Supabase 저장소(`site` 버킷)로 연결된다
-5. HTML 안의 `site.css`·`site.js`·`admin.js` 주소에 빌드 스탬프(`?v=`)를 새로 찍는다 — 빌드 결과 요약은 `/_build.json`
+3. **Supabase 패치** — 표 `site_patches`의 **찾아 바꾸기**를 순서대로 적용한다. 1~57번(9~11월에 넣은 앱 카드·그림·사이트맵·서가 쪽수·전환 유령·관리 화면 문구)은 **2026-11-02에 이 저장소 코드에 합쳤고** 표에서도 껐다 — `build.mjs`가 그 번호는 켜져 있어도 건너뛴다(`FOLDED_THROUGH`). 앞으로는 새 앱도 `data/apps.json`에 직접 커밋하는 게 기본이다. 패치를 새로 넣으면 찾을 문자열이 정확히 한 번 있어야 붙고, 못 찾으면 그 패치만 건너뛰고 빌드 로그에 `patch #N skip`이 남는다
+4. **이야기별 공유 페이지** — `/project/<slug>`(작품집이 있으면 `/project/<slug>/works`도)마다 그 앱의 제목·한 줄 소개·대표 이미지를 `<meta>`(og:*)에 넣은 `index.html` 사본을 만든다. 카카오톡·페이스북처럼 JS를 실행하지 않는 미리보기도 앱별로 보인다. 한 줄 소개·대표 이미지는 빌드할 때의 Supabase 값이라, 관리 화면에서 고친 소개는 다음 배포 때 미리보기에 반영된다(사이트 화면에는 곧바로)
+5. `data/overrides.json`·`content/*.md`는 공개 파일에서 빼고 `api/content.js`가 Supabase(표 `site_content`)에서 내보낸다 — Vercel 앞단에 60초 보관하고 그 뒤에도 하루 동안은 먼저 보여 주며 뒤에서 새로 받는다(관리 화면 게시는 1분 안에 사이트에 보인다). 서버 함수는 서울(`icn1`)에서 돈다. `/media/*` 중 저장소에 없는 파일은 Supabase 저장소(`site` 버킷)로 연결된다
+6. HTML이 부르는 `site.css`·`site.js`·`admin.js` 주소의 `?v=`를 **그 파일 내용의 지문**(sha1 앞 10자리)으로 찍는다. `?v=`가 붙은 CSS·JS는 브라우저가 1년 동안 다시 묻지 않고 쓰며(vercel.json), 내용이 바뀌면 주소가 바뀌어 곧바로 새 파일을 받는다 — 빌드 결과 요약은 `/_build.json`
 
-**코드를 고칠 때 주의**: `site_patches`가 겨냥하는 줄(예: `site.js`의 `visHTML` 한 줄, `site.css`의 `.board-head .count{…}` 한 줄, `data/apps.json`의 `"slug": "next"` 카드)을 바꾸면 그 패치가 안 붙는다. 바꾼 뒤에는 미리보기 배포의 빌드 로그에서 `patches: N/N applied`를 확인한다. 패치 내용을 코드에 아예 합쳤다면 그 패치는 Supabase에서 `enabled=false`로 끈다.
+**코드를 고칠 때 주의**: 표에 새 패치를 넣었다면 그 패치가 겨냥하는 줄을 바꿀 때 조심한다. 바꾼 뒤에는 미리보기 배포의 빌드 로그에서 `patches: N/N applied`를 확인한다. 패치 내용을 코드에 합쳤다면 표에서 `enabled=false`로 끄고 `build.mjs`의 `FOLDED_THROUGH`를 그 번호까지 올린다.
 
 (2026-11-02까지는 배포 묶음 — `build.mjs`·`package.json`·`vercel.json`·`api/` — 을 CLI로 따로 올리고, 이 저장소의 고정 커밋을 내려받아 조립했다. 그 묶음을 이 저장소로 옮겨 하나로 합쳤다. 묶음만 CLI로 올리는 방식도 여전히 동작하며, 그때는 환경변수 `BASE_REF`(기본 `main`)의 커밋을 내려받는다.)
 
 ## 두 종류의 파일 — 새 버전을 올려도 올린 작품이 사라지지 않는 이유
 
-| 누가 관리 | 파일 | 새 버전 zip에 |
+| 누가 관리 | 파일 | 어디에 |
 |---|---|---|
-| 코드(Claude가 zip으로 전달) | `index.html`, `assets/`, `api/`, `apps/`, `data/apps.json`(앱 기본값), `media/<앱>/`의 썸네일·스크린샷 | **들어 있음** — 덮어쓰면 됨 |
-| 내용(관리 화면 `/admin`·`/shots`가 Supabase에 저장) | `data/overrides.json`(작품집·소개·속삭임·고정·공개 설정·스크린샷), `content/<앱>.md`(이야기 글), `media/<앱>/works/`·스크린샷(올린 이미지) | **없음** — 저장소 밖(Supabase)에 있어 코드를 덮어써도 그대로 남음 |
+| 코드(GitHub에 커밋) | `index.html`, `assets/`, `api/`, `apps/`, `data/apps.json`(앱 기본값), `media/<앱>/`의 썸네일·스크린샷 | **이 저장소** — `main`에 푸시하면 배포 |
+| 내용(관리 화면 `/admin`·`/shots`가 Supabase에 저장) | `data/overrides.json`(작품집·소개·속삭임·고정·공개 설정·스크린샷), `content/<앱>.md`(이야기 글), `media/<앱>/works/`·스크린샷(올린 이미지) | **Supabase** — 저장소 밖에 있어 코드를 고쳐도 그대로 남고, 배포 없이 반영 |
 
-사이트는 `apps.json` 위에 `overrides.json`을 덮어서 보여 주고, 관리 화면은 `overrides.json`·`content/`·이미지만 쓴다. 이 저장소의 `data/overrides.json`·`content/*.md`는 예전 시드일 뿐 사이트에 쓰이지 않는다(빌드가 빼고, 실제 값은 Supabase). 그래서 zip을 통째로 덮어써도 관리 화면에서 한 일은 보존된다. (2026-09-08 이전 zip은 `apps.json`을 직접 고쳐 썼기 때문에 새 zip이 덮어쓰면 사라졌다 — 그 문제를 이렇게 갈랐다.) zip은 `tools/make-zip.sh`로 만들며 위 제외 규칙이 들어 있다. 새 앱을 추가할 때 그 앱의 첫 이야기 글만 `content/<새앱>.md`로 따로 넣는다.
+사이트는 `apps.json` 위에 `overrides.json`을 덮어서 보여 주고, 관리 화면은 `overrides.json`·`content/`·이미지만 쓴다. 이 저장소의 `data/overrides.json`·`content/*.md`는 예전 시드일 뿐 사이트에 쓰이지 않는다(빌드가 빼고, 실제 값은 Supabase). 그래서 코드를 통째로 바꿔도 관리 화면에서 한 일은 보존된다. 새 앱을 추가할 때 그 앱의 첫 이야기 글은 관리 화면 04에서 쓰거나 Supabase `site_content`에 `content/<새앱>.md`로 넣는다.
 
 ## 빌드 스탬프 — 배포 때 자동
 
-배포할 때마다 `build.mjs`가 CSS·JS 주소의 `?v=`를 새로 찍으므로 따로 할 일은 없다. 로컬에서 볼 때 등 손으로 맞추고 싶으면:
+배포할 때마다 `build.mjs`가 CSS·JS 주소의 `?v=`를 파일 내용의 지문으로 찍으므로 따로 할 일은 없다(위 「배포 방식」 6). 로컬에서 볼 때 등 손으로 맞추고 싶으면:
 
 ```bash
 python3 tools/stamp.py
 ```
 
-`index.html`·`admin.html`이 부르는 `site.css?v=…`, `site.js?v=…`, `admin.js?v=…`의 `v=`를 지금 시각으로 바꾼다(site.js는 그 값을 `/data/apps.json?v=…`에도 붙인다). `index.html` 머리의 앱 목록 미리 받기(`<link rel="preload" href="/data/apps.json?v=…">`, overrides.json도)도 같은 값으로 맞춘다 — site.js가 요청하는 주소와 글자 하나까지 같아야 미리 받은 응답을 그대로 쓴다(다르면 한 번 더 받을 뿐 고장 나지는 않는다). HTML은 항상 새로 받아지므로, 폰·PC 어느 브라우저가 옛 CSS/JS를 캐시에 쥐고 있어도 **배포 즉시 새 파일**을 받는다. Claude가 zip을 만들 때 자동으로 돌리지만, 직접 CSS/JS를 고쳐 올릴 때도 한 번 돌리면 "폰에서만 옛 화면" 같은 일이 없다. (PC와 모바일은 같은 파일 한 벌이다 — 따로 있는 모바일 페이지는 없다.)
+`index.html`·`admin.html`이 부르는 `site.css?v=…`, `site.js?v=…`, `admin.js?v=…`의 `v=`를 지금 시각으로 바꾼다(site.js는 그 값을 `/data/apps.json?v=…`에도 붙인다). `index.html` 머리의 앱 목록 미리 받기(`<link rel="preload" href="/data/apps.json?v=…">`, overrides.json도)도 같은 값으로 맞춘다 — site.js가 요청하는 주소와 글자 하나까지 같아야 미리 받은 응답을 그대로 쓴다(다르면 한 번 더 받을 뿐 고장 나지는 않는다). HTML은 항상 새로 받아지므로, 폰·PC 어느 브라우저가 옛 CSS/JS를 캐시에 쥐고 있어도 **배포 즉시 새 파일**을 받는다. (PC와 모바일은 같은 파일 한 벌이다 — 따로 있는 모바일 페이지는 없다.)
 
 ## 로컬에서 보기
 
@@ -184,7 +185,7 @@ npx serve -s .
 `-s`(single-page) 옵션이 있어야 `/project/<slug>` 주소가 index.html로 연결된다. 그런 다음 `http://localhost:3000` 열기.
 간단히 볼 때는 `http://localhost:3000/?id=nooneleft` 처럼 `?id=` 로도 상세를 열 수 있다.
 관리 화면(`/admin`)은 서버 함수(`api/admin.js`)가 있어야 해서 `serve`로는 로그인이 안 된다. 굳이 로컬에서 보려면 `npx vercel dev`(환경변수는 `.env.local`에) — 보통은 배포된 주소에서 쓰면 된다.
-`serve`로 보는 화면은 저장소 파일 그대로라 Supabase의 패치(새 앱 카드 등)·작품집·스크린샷이 빠져 있다. 라이브와 같은 조립본은 `node build.mjs`로 `public/`에 만들 수 있다(Supabase에 접속할 수 있어야 한다).
+`serve`로 보는 화면은 저장소 파일 그대로라 Supabase에 있는 작품집·스크린샷·새 앱 대표 이미지가 빠져 있다(앱 카드 19개는 모두 보인다). 라이브와 같은 조립본은 `node build.mjs`로 `public/`에 만들 수 있다(Supabase에 접속할 수 있어야 한다).
 
 ## 배포 (처음 한 번)
 
@@ -196,7 +197,8 @@ npx serve -s .
 
 ## 아직 비어 있는 자리
 
-- 이야기별 링크 미리보기 — 카카오톡·페이스북 미리보기는 JS를 실행하지 않아, `/project/<slug>`를 보내도 지금은 사이트 공통 제목·이미지(og.jpg)가 나온다(검색엔진처럼 JS를 읽는 곳에는 이야기별 제목·설명이 반영된다). 이야기별로 다르게 하려면 서버(Vercel 함수나 미들웨어)가 주소에 맞춰 `<meta>`를 바꿔 내보내야 한다
+- 폰에서 올린 스크린샷 용량 — 아이폰 사파리는 브라우저에서 WebP로 저장하지 못해 `/shots`·관리 화면이 JPEG(품질 0.92·0.88)로 올린다. Supabase의 JPEG 53장이 14MB(평균 265KB)로, 폭주전설·폭주 구구단 상세는 사진만 3MB가 넘는다. 품질을 0.8 안팎으로 낮추고 기존 파일을 다시 압축하면 크게 준다
+- 웹폰트 — 나눔명조·Noto Sans KR 파일이 첫 방문에 500KB 넘게 받아진다. 본문을 기기 글꼴로 바꾸거나 굵기를 줄이면 준다(디자인 결정)
 - `media/card-novel/works/w20260909-066l/` — 어디에서도 쓰지 않는 폴더(「주파수 72.4」를 처음 올렸을 때의 사본으로 보임, 608KB). 방문자가 받는 일은 없으니 지워도 되고 그냥 둬도 된다
 - `site.feedbackForm` — 구글 폼 주소 (비어 있으면 "준비 중" 안내)
 - 탐정게임 — 지금은 `private: true`로 비공개(실행·다운로드 누르면 "비공개입니다"). 공개할 때 `apps/nooneleft/README.md` 참고
@@ -221,6 +223,7 @@ npx serve -s .
 - 서체는 Google Fonts(Nanum Myeongjo, Noto Sans KR, IBM Plex Mono — OFL)에서 불러온다. IBM Plex Mono는 영문·숫자 라벨(No. 01, SEALED, 날짜)에만 쓰고, 한글이 섞이는 글은 전부 Noto Sans KR(`--label`)이다.
 - 웹폰트 CSS는 **화면 그리기를 막지 않게** 받는다(2026-11): `<link rel="preload" as="style" onload="this.rel='stylesheet'">` + JS가 꺼진 경우를 위한 `<noscript>`. 한글 폰트 파일이 40개 가까이(약 580KB) 되어, 예전처럼 막고 기다리면 폰에서 첫 화면이 수 초 늦었다. 그동안은 기기 글꼴로 먼저 보이고 도착하면 교체된다(display=swap). 글꼴이 늦게 도착할 때마다(`document.fonts`의 `loadingdone`) 별자리 선·속삭임 위치를 다시 잡는다.
 - **레이아웃 밀림(CLS) 방지**(2026-11): 웹폰트가 기기 글꼴과 바뀔 때 줄바꿈이 달라지면 서가 전체가 밀린다. 그래서 히어로 제목 폭은 글꼴마다 달라지는 `ch` 대신 `em`(`max-width:9em`), 폰(≤480px)에서는 「촛불을 움직이면…」 안내를 늘 버튼 아랫줄에 둔다. 앱 목록이 오기 전에는 자리표시 카드 4장(`.file.skel`)과 칩 줄 높이(`.chips:empty`, 폰은 두 줄)를 잡아 둔다.
+- 태그 칩은 앱이 많은 태그부터(같으면 처음 나온 순) 놓는다. 폰·작은 태블릿(≤760px)에서는 칩을 한 줄로 두고 옆으로 밀어 본다 — 태그가 17개로 늘어 칩이 다섯 줄을 차지하며 서가를 밀어내던 것(2026-11). 집계 줄은 「숫자+단위」 마디 안에서 줄을 바꾸지 않는다.
 - 앱 목록(`apps.json`·`overrides.json`)은 `index.html`이 CSS·JS와 함께 미리 받는다(preload) — site.js가 실행된 뒤에 요청을 시작하던 한 번의 왕복을 줄여 카드가 더 빨리 뜬다.
 - 서가 카드의 **제목이 진짜 링크**(`<a class="case-link" href="/project/<slug>">`)다(2026-11). 예전엔 카드 전체가 `role="button"`이었는데 그 안에 실행·다운로드 버튼이 또 있어 접근성 규칙 위반이었고, 검색엔진이 따라갈 이야기 주소 링크도 없었다. 카드 어디를 눌러도 열리는 건 그대로이고, 제목을 Ctrl/⌘·가운데 버튼으로 누르면 새 탭에서 열린다. 키보드는 Tab으로 제목에 와서 Enter.
 - 겹(상세·작품집·뷰어·라이트박스·소개)이 열리면 맨 위 겹만 조작되도록 나머지(헤더·본문·푸터·아래 겹)에 `inert`를 건다 — Tab이 뒤 화면으로 새지 않는다. 위 겹이 닫히면 아래 겹에서 머물던 곳으로, 다 닫히면 열기 전 자리로 포커스가 돌아온다(site.js `syncInert`, `hidden` 속성 변화만 지켜본다). 인트로는 Enter·Space·Esc로도 건너뛴다.

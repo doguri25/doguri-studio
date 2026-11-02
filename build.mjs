@@ -10,6 +10,7 @@
 import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { gunzipSync } from 'node:zlib';
+import { createHash } from 'node:crypto';
 
 const ENV = process.env;
 const BASE_REPO = ENV.BASE_REPO || 'doguri25/doguri-studio';
@@ -91,19 +92,72 @@ async function main() {
     log(`patches: ${patches.length - bad.length}/${patches.length} applied`);
   } catch (e) { warnings.push('site_patches: ' + (e && e.message || e)); log('WARN', warnings.at(-1)); }
 
-  /* 3) 도메인 치환 + 스탬프 */
+  /* 2c) 이야기별 공유 페이지 — 카카오톡·페이스북 링크 미리보기는 JS를 실행하지 않아 /project/<slug> 를 보내도 사이트 공통 제목만 보였다.
+         그 주소마다 앱의 제목·한 줄 소개·대표 이미지를 <meta>에 넣은 index.html 사본을 만들어 둔다(화면과 동작은 index.html 그대로) */
+  let nPages = 0;
+  try { nPages = await sharePages(warnings); log(`share pages: ${nPages}`); }
+  catch (e) { warnings.push('share pages: ' + (e && e.message || e)); log('WARN', warnings.at(-1)); }
+
+  /* 3) 도메인 치환 */
   const stamp = new Date(Date.now() + 9 * 3600e3).toISOString().replace(/[-:T]/g, '').slice(0, 12);  // KST YYYYMMDDHHmm
   let nHost = 0;
-  for (const file of walk(OUT)) {
-    if (!TEXT_EXT.test(file) || /^apps\//.test(rel(file))) continue;      // 호스팅 앱(apps/) 원문은 건드리지 않는다
-    let s = readFileSync(file, 'utf8'); const o = s;
-    if (OLD_HOST !== SITE_HOST) s = s.split(OLD_HOST).join(SITE_HOST);
-    if (/\.html$/i.test(file)) s = s.replace(/(\/assets\/(?:css|js)\/[a-z]+\.(?:css|js))(\?v=[0-9a-z]+)?/g, (_, p) => `${p}?v=${stamp}`);
-    if (s !== o) { writeFileSync(file, s); nHost++; }
+  const texts = [...walk(OUT)].filter(f => TEXT_EXT.test(f) && !/^apps\//.test(rel(f)));   // 호스팅 앱(apps/) 원문은 건드리지 않는다
+  if (OLD_HOST !== SITE_HOST) for (const file of texts) {
+    const s = readFileSync(file, 'utf8'); if (s.includes(OLD_HOST)) { writeFileSync(file, s.split(OLD_HOST).join(SITE_HOST)); nHost++; }
   }
-  log(`rewritten text files: ${nHost}, stamp ${stamp}`);
-  writeFileSync(join(OUT, '_build.json'), JSON.stringify({ base, stamp, at: new Date().toISOString(), node: process.version, overrides: nOver, deleted: nDel, patches: patches.length, patchesSkipped: bad, warnings }, null, 2));
+  /* 3b) 스탬프 — HTML이 부르는 /assets/css·js 주소 뒤 ?v= 를 그 파일 내용의 지문(sha1 앞 10자리)으로 찍는다.
+         내용이 같으면 주소도 같아 배포 뒤에도 브라우저 캐시를 그대로 쓰고, 바뀐 파일만 새 주소가 된다(vercel.json이 ?v= 붙은 자산을 1년 캐시) */
+  const vers = new Map();
+  const verOf = p => { if (!vers.has(p)) { const f = join(OUT, p.slice(1)); vers.set(p, existsSync(f) ? createHash('sha1').update(readFileSync(f)).digest('hex').slice(0, 10) : stamp); } return vers.get(p); };
+  let nStamp = 0;
+  for (const file of texts) {
+    if (!/\.html$/i.test(file)) continue;
+    const s = readFileSync(file, 'utf8');
+    const t = s.replace(/(\/assets\/(?:css|js)\/[a-z]+\.(?:css|js))(\?v=[0-9a-z]+)?/g, (_, p) => `${p}?v=${verOf(p)}`);
+    if (t !== s) { writeFileSync(file, t); nStamp++; }
+  }
+  log(`rewritten text files: host ${nHost}, stamp ${nStamp} (${[...vers].map(([p, v]) => p.split('/').pop() + '@' + v).join(' ')})`);
+  writeFileSync(join(OUT, '_build.json'), JSON.stringify({ base, stamp, versions: Object.fromEntries(vers), at: new Date().toISOString(), node: process.version, overrides: nOver, deleted: nDel, patches: patches.length, patchesSkipped: bad, sharePages: nPages, warnings }, null, 2));
   log('done →', OUT);
+}
+
+/* ─── 이야기별 공유 페이지 ─── */
+const escHTML = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+async function sharePages(warnings) {
+  const idxFile = join(OUT, 'index.html'), appsFile = join(OUT, 'data', 'apps.json');
+  if (!existsSync(idxFile) || !existsSync(appsFile)) return 0;
+  const html = readFileSync(idxFile, 'utf8');
+  const data = JSON.parse(readFileSync(appsFile, 'utf8'));
+  let ov = {};                                                            // 관리 화면이 고친 한 줄 소개·대표 이미지·작품집(site.js와 같은 덮어쓰기)
+  try { const rows = await sb(`/rest/v1/site_content?path=eq.data/overrides.json&select=text`); if (rows && rows[0]) ov = (JSON.parse(rows[0].text) || {}).apps || {}; }
+  catch (e) { warnings.push('share pages: overrides ' + (e && e.message || e)); }
+  const origin = `https://${SITE_HOST}`, NAME = (data.site && data.site.name) || '도구리 작업실';
+  let n = 0;
+  for (const a0 of data.apps || []) {
+    if (!a0 || a0.status === 'soon' || !/^[a-z0-9-]+$/.test(a0.slug || '')) continue;
+    const a = { ...a0 }, o = ov[a.slug];
+    if (o && typeof o === 'object') for (const k of ['summary', 'thumb', 'works']) if (k in o) a[k] = o[k];
+    const path = `/project/${a.slug}`;
+    put(path.slice(1) + '/index.html', shareHTML(html, { url: origin + path, title: `${a.name} · ${NAME}`, desc: a.summary, image: a.thumb, size: [800, 500], alt: `${a.name} 화면` }, origin));
+    const works = (a.works || []).filter(w => w && Array.isArray(w.cards) && w.cards.length);
+    if (works.length) put(path.slice(1) + '/works/index.html', shareHTML(html, { url: origin + path + '/works', title: `${a.name} 작품집 · ${NAME}`, desc: `${a.name}의 작품 ${works.length}편 — 표지를 누르면 한 장씩 넘겨 읽을 수 있어요.`, image: works[0].cards[0], alt: `「${works[0].title || ''}」 표지` }, origin));
+    n++;
+  }
+  return n;
+}
+function shareHTML(html, p, origin) {
+  const abs = u => /^https?:\/\//.test(u) ? u : origin + u;
+  const meta = (attr, key, val) => { const re = new RegExp(`(<meta ${attr}="${key}" content=")[^"]*(">)`); s = s.replace(re, (_, a, b) => a + escHTML(val) + b); };
+  let s = html.replace(/<title>[^<]*<\/title>/, () => `<title>${escHTML(p.title)}</title>`);
+  if (p.desc) { meta('name', 'description', p.desc); meta('property', 'og:description', p.desc); }
+  meta('property', 'og:title', p.title);
+  s = s.replace(/<meta property="og:image:(?:width|height|alt)" content="[^"]*">\n?/g, '');
+  if (p.image) {
+    meta('property', 'og:image', abs(p.image));
+    const extra = (p.size ? `<meta property="og:image:width" content="${p.size[0]}">\n<meta property="og:image:height" content="${p.size[1]}">\n` : '') + (p.alt ? `<meta property="og:image:alt" content="${escHTML(p.alt)}">\n` : '');
+    s = s.replace(/(<meta property="og:image" content="[^"]*">\n)/, (_, a) => a + extra);
+  }
+  return s.replace('</head>', () => `<meta property="og:url" content="${escHTML(p.url)}">\n<link rel="canonical" href="${escHTML(p.url)}">\n</head>`);
 }
 
 /* ─── Supabase REST (anon 읽기) ─── */

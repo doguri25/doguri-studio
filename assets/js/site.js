@@ -112,12 +112,14 @@ function renderCards(){
   $$('.file',grid).forEach(bindCard);
 }
 function renderChips(){
-  const all=[...new Set(APPS.flatMap(a=>a.tags))].filter(t=>t!=='준비 중');
   const cnt=t=>APPS.filter(a=>a.tags.includes(t)).length;
+  /* 태그가 늘어 칩이 많아졌다 — 앱이 많은 태그부터(같으면 처음 나온 순) 놓아 자주 쓰는 칩이 앞에 오게 */
+  const all=[...new Set(APPS.flatMap(a=>a.tags))].filter(t=>t!=='준비 중').map((t,i)=>({t,i,n:cnt(t)})).sort((x,y)=>y.n-x.n||x.i-y.i).map(x=>x.t);
   chipsEl.innerHTML=[`<button type="button" class="chip on" data-tag="all" aria-pressed="true">전체<span class="n">${APPS.length}</span></button>`,...all.map(t=>`<button type="button" class="chip" data-tag="${esc(t)}" aria-pressed="false">${esc(t)}<span class="n">${cnt(t)}</span></button>`)].join('');
   $$('.chip',chipsEl).forEach(c=>c.addEventListener('click',()=>setFilter(c.dataset.tag)));
 }
-function updateCount(){ const vis=$$('.file',grid).filter(c=>!c.hidden||c.classList.contains('paged')); const soon=vis.filter(c=>c.classList.contains('soon')).length; const priv=vis.filter(c=>c.dataset.private==='1'&&!c.classList.contains('soon')).length; const live=vis.length-soon-priv; $('#count').innerHTML=`서가의 봉인 <b>${vis.length}</b>통 · 열 수 있는 이야기 <b>${live}</b>편${priv?` · 비공개 <b>${priv}</b>편`:''} · 쓰는 중 <b>${soon}</b>편`; }
+function updateCount(){ const vis=$$('.file',grid).filter(c=>!c.hidden||c.classList.contains('paged')); const soon=vis.filter(c=>c.classList.contains('soon')).length; const priv=vis.filter(c=>c.dataset.private==='1'&&!c.classList.contains('soon')).length; const live=vis.length-soon-priv; const seg=(label,n,unit)=>`<span class="seg">${label} <b>${n}</b>${unit}</span>`; /* 마디 안에서는 줄을 바꾸지 않는다(폰에서 「1 / 편」처럼 갈라지던 것) */
+  $('#count').innerHTML=[seg('서가의 봉인',vis.length,'통'),seg('열 수 있는 이야기',live,'편'),priv?seg('비공개',priv,'편'):'',seg('쓰는 중',soon,'편')].filter(Boolean).join(' · '); }
 /* 서가 쪽수: PC 12통·폰 5통씩 보이고, 「더 보기」를 누르면 다음 묶음이 나온다 (카드가 늘어도 첫 화면이 무거워지지 않게) */
 const PAGE=()=>matchMedia('(max-width:760px)').matches?5:12; let shown=PAGE();
 function applyPage(t){
@@ -129,6 +131,7 @@ function applyPage(t){
 function setFilter(t,silent){ shown=PAGE();
   if(!$$('.chip',chipsEl).some(c=>c.dataset.tag===t)) t='all';
   tag=t; $$('.chip',chipsEl).forEach(c=>{ const on=c.dataset.tag===t; c.classList.toggle('on',on); c.setAttribute('aria-pressed',on); });
+  const onChip=$('.chip.on',chipsEl); if(onChip&&chipsEl.scrollWidth>chipsEl.clientWidth+1){ const cr=chipsEl.getBoundingClientRect(), r=onChip.getBoundingClientRect(); if(r.left<cr.left+16||r.right>cr.right-18) chipsEl.scrollBy({left:r.left-cr.left-(cr.width-r.width)/2,behavior:reduced||silent?'auto':'smooth'}); }
   const apply=()=>{ applyPage(t); updateCount(); drawThread(false); };
   if(document.startViewTransition&&!reduced&&!silent){ document.startViewTransition(apply); } else apply();
   if(!silent&&!current&&about.hidden) history.replaceState(history.state,'',t==='all'?'/':'/#tag='+encodeURIComponent(t));
@@ -428,8 +431,8 @@ addEventListener('keydown',e=>{
   if((e.key==='ArrowLeft'||e.key==='ArrowRight')&&current&&gallery.hidden&&about.hidden&&!e.altKey&&!e.ctrlKey&&!e.metaKey&&!e.shiftKey&&!typing(e.target)){ e.preventDefault(); step(e.key==='ArrowRight'?1:-1); } });
 
 /* ═══════════════ 주소 → 화면 ═══════════════ */
-function parseLocation(){ const q=new URLSearchParams(location.search); let w=location.pathname.match(/^\/project\/([^/]+)\/works\/?$/); if(w) return {view:'works',slug:decodeURIComponent(w[1])};
-  let m=location.pathname.match(/^\/project\/([^/]+)\/?$/);
+function parseLocation(){ const q=new URLSearchParams(location.search); let w=location.pathname.match(/^\/project\/([^/]+)\/works\/?(?:index\.html)?$/); if(w) return {view:'works',slug:decodeURIComponent(w[1])};
+  let m=location.pathname.match(/^\/project\/([^/]+)\/?(?:index\.html)?$/);   /* 빌드가 만든 공유 페이지(/project/<slug>/index.html)로 직접 들어와도 */
   if(m) return {view:'project',slug:decodeURIComponent(m[1])}; if(q.get('id')) return {view:'project',slug:q.get('id')};
   if(/^\/about\/?$/.test(location.pathname)) return {view:'about'}; return {view:'home'}; }
 function parseTag(){ const h=location.hash.match(/^#tag=(.+)$/); if(h) return decodeURIComponent(h[1]); const q=new URLSearchParams(location.search); return q.get('tag')||'all'; }
