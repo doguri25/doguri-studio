@@ -180,7 +180,8 @@ a.btn{text-decoration:none;cursor:pointer;-webkit-user-drag:none}
 .board-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:16px}
 .board-head h2{font:700 clamp(20px,2.6vw,28px)/1.2 var(--serif);color:var(--paper-strong);letter-spacing:.02em}
 .board-head h2 small{display:block;font:500 10px/1 var(--mono);color:var(--gold);letter-spacing:.38em;margin-bottom:10px}
-.board-head .count{font:400 12.5px/1.6 var(--label);color:var(--paper-3);letter-spacing:.01em;font-variant-numeric:tabular-nums;min-height:1.6em}
+.board-head .count{font:400 12.5px/1.6 var(--label);color:var(--paper-3);letter-spacing:.01em;font-variant-numeric:tabular-nums}
+.board-head .count:empty{min-height:1.6em}  /* 집계가 채워지기 전에도 한 줄 자리 */
 .board-head .count b{color:var(--paper);font-weight:500}
 .chips{display:flex;gap:8px;flex-wrap:wrap;padding:18px 0 8px}
 .chips:empty{min-height:59px}  /* 칩이 채워지기 전에도 칩 줄 높이를 잡아 둔다 — 아래 서가가 뒤늦게 밀려 내려가지 않게(폰은 두 줄, 아래 미디어 쿼리) */
