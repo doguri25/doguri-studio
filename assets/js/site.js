@@ -19,6 +19,18 @@ const SITE_NAME='도구리 작업실';
 /* 빌드 스탬프: index.html이 이 파일을 site.js?v=… 로 불렀다면 그 값을 apps.json 요청에도 붙인다(tools/stamp.py) */
 const BUILD=(()=>{ try{ const src=(document.currentScript&&document.currentScript.src)||''; const m=/[?&]v=([0-9a-z]+)/i.exec(src); return m?m[1]:''; }catch(e){ return ''; } })();
 let SITE={}, APPS=[];
+const siteBase=()=>String(SITE.url||location.origin).replace(/\/+$/,'');
+
+/* ═══════════════ 화면별 제목·설명 (검색·공유) ═══════════════
+   /project/<slug> · /works · /about 도 같은 index.html이라, 화면이 바뀔 때마다 title·description·og·canonical을 그 화면에 맞춘다.
+   (구글처럼 JS를 실행하는 곳에 반영된다. canonical을 HTML에 고정해 두면 모든 이야기 주소가 홈의 사본으로 취급되므로 여기서만 넣는다) */
+const DEFAULT_DESC=($('meta[name="description"]')||{}).content||'', DEFAULT_OG_DESC=($('meta[property="og:description"]')||{}).content||DEFAULT_DESC;
+function setMeta(attr,key,val){ let m=document.head.querySelector(`meta[${attr}="${key}"]`); if(!m){ m=document.createElement('meta'); m.setAttribute(attr,key); document.head.appendChild(m); } m.setAttribute('content',val); }
+function setPage(p={}){ const url=siteBase()+(p.path||'/');
+  document.title=p.title?p.title+' · '+SITE_NAME:SITE_NAME;
+  setMeta('name','description',p.desc||DEFAULT_DESC); setMeta('property','og:title',p.title||SITE_NAME); setMeta('property','og:description',p.desc||DEFAULT_OG_DESC); setMeta('property','og:url',url);
+  let c=$('link[rel="canonical"]'); if(!c){ c=document.createElement('link'); c.rel='canonical'; document.head.appendChild(c); } c.href=url; }
+const pageOf=app=>({title:app.name,desc:app.summary,path:'/project/'+encodeURIComponent(app.slug)});
 
 /* 복사·드래그 선택 방지 (공개 페이지만): 링크 드래그·이미지 저장 메뉴는 두고, 글자 복사와 선택만 막는다 */
 ['copy','cut','selectstart'].forEach(ev=>document.addEventListener(ev,e=>{ if(!document.body.classList.contains('site')) return; const t=e.target; if(t&&(t.closest&&t.closest('input,textarea'))) return; e.preventDefault(); }));
@@ -26,9 +38,10 @@ addEventListener('keydown',e=>{ if(!document.body.classList.contains('site')) re
 
 /* ═══════════════ 인트로: 처음 온 사람에게만 ═══════════════ */
 const intro=$('#intro');
-function finishIntro(){ if(!intro||intro._done)return; intro._done=true; intro.classList.add('open'); setTimeout(()=>{intro.remove();document.body.classList.add('go');revealCards();},1250); store.set('dgr-intro-seen','1'); }
+const introKey=e=>{ if(e.key==='Enter'||e.key===' '||e.key==='Escape'){ e.preventDefault(); finishIntro(); } };
+function finishIntro(){ if(!intro||intro._done)return; intro._done=true; removeEventListener('keydown',introKey); intro.classList.add('open'); setTimeout(()=>{intro.remove();document.body.classList.add('go');revealCards();},1250); store.set('dgr-intro-seen','1'); }
 if(reduced||store.get('dgr-intro-seen')){ intro.remove(); document.body.classList.add('go'); }
-else{ intro.addEventListener('click',finishIntro); setTimeout(finishIntro,1500); }
+else{ intro.addEventListener('click',finishIntro); addEventListener('keydown',introKey); setTimeout(finishIntro,1500); }
 
 /* ═══════════════ 제목 글자 분리 ═══════════════ */
 (function(){const h=$('#title');let i=0;const walk=n=>{[...n.childNodes].forEach(c=>{if(c.nodeType===3){const f=document.createDocumentFragment();[...c.textContent].forEach(ch=>{const s=document.createElement('span');s.className='lt'+(ch===' '?' sp':'');s.textContent=ch===' '?' ':ch;s.style.setProperty('--i',i++);f.appendChild(s)});n.replaceChild(f,c)}else walk(c)})};walk(h);})();
@@ -37,20 +50,23 @@ else{ intro.addEventListener('click',finishIntro); setTimeout(finishIntro,1500);
 const root=document.documentElement, whispers=$('#whispers'), cursor=$('.cursor');
 let px=innerWidth/2, py=innerHeight*.38, cx=px, cy=py, found=new Set();
 /* 포인터 처리는 프레임당 한 번(rAF)으로 묶는다 — pointermove마다 레이아웃을 읽고 스타일을 쓰면 PC에서 끊긴다 */
-let ptrDirty=false, whisperEls=null, whisperBoxes=null, whisperBoxT=0;
-function movePointer(x,y){ px=x;py=y; if(!ptrDirty){ ptrDirty=true; requestAnimationFrame(applyPointer); } }
+let ptrDirty=false, whisperEls=null, whisperBoxes=null, whisperBoxT=0, wakeCursor=()=>{};
+function movePointer(x,y){ px=x;py=y; wakeCursor(); if(!ptrDirty){ ptrDirty=true; requestAnimationFrame(applyPointer); } }
 function applyPointer(){ ptrDirty=false; const x=px,y=py; root.style.setProperty('--x',x+'px'); root.style.setProperty('--y',y+'px');
   const now=performance.now(); if(!whisperEls||now-whisperBoxT>600){ whisperEls=$$('.whisper'); const wr=whispers.getBoundingClientRect(); whisperBoxes={wr,list:whisperEls.map(c=>c.getBoundingClientRect())}; whisperBoxT=now; }
   const r=whisperBoxes.wr; whispers.style.setProperty('--cx',(x-r.left)+'px'); whispers.style.setProperty('--cy',(y-r.top)+'px');
+  if(found.size>=whisperEls.length) return; /* 다 들었으면 거리 계산은 그만 — 촛불 마스크 위치만 따라간다 */
   whisperEls.forEach((c,i)=>{ if(found.has(i))return; const b=whisperBoxes.list[i]; const dx=b.left+b.width/2-x, dy=b.top+b.height/2-y; if(Math.hypot(dx,dy)<130){ found.add(i); $('#whisperN').textContent=found.size; const bd=$('#whisperBadge'); bd.classList.remove('bump'); void bd.offsetWidth; bd.classList.add('bump'); if(found.size===3) toast('속삭임을 모두 들었습니다. 이제 서랍을 열어도 됩니다.'); } }); }
 addEventListener('pointermove',e=>movePointer(e.clientX,e.clientY),{passive:true});
 addEventListener('touchmove',e=>{const t=e.touches[0];if(t)movePointer(t.clientX,t.clientY)},{passive:true});
 addEventListener('touchstart',e=>{const t=e.touches[0];if(t)movePointer(t.clientX,t.clientY)},{passive:true});
-if(fine&&!reduced){ (function loop(){ cx+=(px-cx)*.18; cy+=(py-cy)*.18; cursor.style.transform=`translate(${cx}px,${cy}px) translate(-50%,-50%)`; requestAnimationFrame(loop); })();
+/* 커서 링은 포인터를 따라잡으면 rAF를 멈추고, 다시 움직일 때 깨운다 — 가만히 있는 동안 매 프레임 스타일을 쓰지 않게 */
+if(fine&&!reduced){ let cursorOn=false; const loop=()=>{ cx+=(px-cx)*.18; cy+=(py-cy)*.18; cursor.style.transform=`translate(${cx}px,${cy}px) translate(-50%,-50%)`; if(Math.abs(px-cx)+Math.abs(py-cy)>.4) requestAnimationFrame(loop); else cursorOn=false; };
+  wakeCursor=()=>{ if(!cursorOn){ cursorOn=true; requestAnimationFrame(loop); } }; wakeCursor();
   document.addEventListener('pointerover',e=>{ cursor.classList.toggle('hot',!!e.target.closest('a,button,.file,.chip,.shot,.card3d')); }); }
 
 /* ═══════════════ 반딧불 · 먼지 ═══════════════ */
-(function(){ if(reduced)return; const c=$('#dust'),ctx=c.getContext('2d'); let W,H,P=[]; const N=90;
+(function(){ if(reduced)return; const c=$('#dust'),ctx=c.getContext('2d'); let W,H,P=[]; const N=Math.round(Math.max(40,Math.min(90,innerWidth*innerHeight/14000))); /* 화면 넓이에 비례 — 폰은 40개, 큰 화면은 90개(밀도는 비슷) */
   const DPR=1; /* 먼지는 작은 점이라 고해상도가 필요 없다 — 4K·레티나에서 픽셀 4배를 아낀다 */
   /* 폰에서 스크롤로 주소창이 접히고 펴질 때 innerHeight가 바뀌며 resize가 오는데, 그때마다 캔버스를 다시 만들면 점들이 순간이동한다.
      캔버스는 처음부터 '가장 큰 화면 높이'로 잡고, 폭이 바뀌거나 높이가 더 커질 때만 다시 만든다(그때도 점 위치는 비율로 유지). */
@@ -67,23 +83,27 @@ if(fine&&!reduced){ (function loop(){ cx+=(px-cx)*.18; cy+=(py-cy)*.18; cursor.s
 
 /* ═══════════════ 헤더 · 패럴랙스 ═══════════════ */
 /* compact 전환에 히스테리시스(내려갈 땐 64px, 올라올 땐 16px) — 경계에서 왔다 갔다 하지 않게 */
-addEventListener('scroll',()=>{ whisperBoxT=0; const t=$('#top'); if(scrollY>64) t.classList.add('compact'); else if(scrollY<16) t.classList.remove('compact'); $('.moon').style.setProperty('--sy',scrollY); },{passive:true});
+/* 스크롤 처리는 프레임당 한 번(rAF). 달은 400px 아래로는 이미 안 보이므로 그 뒤로는 값을 바꾸지 않는다 */
+const topBar=$('#top'), moonEl=$('.moon'); let scrollQ=false, lastSy=-1;
+addEventListener('scroll',()=>{ whisperBoxT=0; if(scrollQ) return; scrollQ=true; requestAnimationFrame(()=>{ scrollQ=false; const y=scrollY;
+  if(y>64) topBar.classList.add('compact'); else if(y<16) topBar.classList.remove('compact');
+  const sy=Math.min(400,Math.round(y)); if(sy!==lastSy){ lastSy=sy; moonEl.style.setProperty('--sy',sy); } }); },{passive:true});
 
 /* ═══════════════ 그림·썸네일 ═══════════════ */
 function artHTML(kind){ return `<div class="art ${kind||'soon-art'}">${kind==='cards'?'<i></i><i></i><i></i>':kind==='sun'?'<i></i><i></i>':'<i></i>'}</div>`; }
 /* 스크린샷이 있으면 사진, 없으면 벡터 그림 */
-function visHTML(app,src){ const s=src||app.thumb; return `<div class="vis">${artHTML(app.art)}${s?`<img src="${esc(s)}" alt="${esc(app.name)} 화면" loading="lazy">`:''}</div>`; }
+function visHTML(app,src){ const s=src||app.thumb; return `<div class="vis">${artHTML(app.art)}${s?`<img src="${esc(s)}" alt="${esc(app.name)} 화면" loading="lazy" decoding="async">`:''}</div>`; }
 
 /* ═══════════════ 서가 렌더 ═══════════════ */
 const grid=$('#grid'), chipsEl=$('#chips'); let tag='all';
 const rots=[-1.6,1.1,-0.8,1.4,-1.2,0.9];
 function renderCards(){
   grid.innerHTML=APPS.map((a,i)=>`
-  <article class="file ${a.status==='soon'?'soon':''}" data-slug="${esc(a.slug)}" data-tags="${esc(a.tags.join('|'))}" data-private="${a.private?1:0}" style="--rot:${rots[i%rots.length]}deg;--vt:file-${esc(a.slug)}" tabindex="0" role="button" aria-label="${esc(a.name)} 열어 보기"><div class="inner">
+  <article class="file ${a.status==='soon'?'soon':''}" data-slug="${esc(a.slug)}" data-tags="${esc(a.tags.join('|'))}" data-private="${a.private?1:0}" style="--rot:${rots[i%rots.length]}deg;--vt:file-${esc(a.slug)}"><div class="inner">
     <i class="seal" aria-hidden="true">D</i>
     <span class="tab">${a.status==='soon'?'UNWRITTEN':(a.private?'PRIVATE · ':'SEALED · ')+esc(a.num)}</span>
     <div class="photo"><i class="tape l"></i><i class="tape r"></i>${visHTML(a)}<div class="lens" aria-hidden="true">${visHTML(a)}</div></div>
-    <div class="meta"><h3><span class="num">${esc(a.num)}</span>${esc(a.name)}</h3><p>${esc(a.summary)}</p><div class="tags">${a.tags.map(t=>`<span>${esc(t)}</span>`).join('')}</div></div>
+    <div class="meta"><h3><span class="num">${esc(a.num)}</span>${a.status==='soon'?esc(a.name):`<a class="case-link" href="/project/${esc(a.slug)}">${esc(a.name)}</a>`}</h3><p>${esc(a.summary)}</p><div class="tags">${a.tags.map(t=>`<span>${esc(t)}</span>`).join('')}</div></div>
     <div class="acts">${a.cardButton==='works'&&validWorks(a).length?`<a class="btn gold run" href="/project/${esc(a.slug)}/works" role="button">작품 보기</a>`:runLink(a,'실행','run')}<button type="button" class="btn line dl" ${canDl(a)||a.private?'':'disabled'} ${a.downloads&&a.downloads.length&&a.allowDownload===false?'title="지금은 내려받을 수 없어요"':''}>다운로드</button></div>
     <span class="stamp" aria-hidden="true">${a.status==='soon'?'아직 봉인 중':a.private?'비공개 · 열람만':'봉인을 뜯어 보세요'}</span>
   </div></article>`).join('');
@@ -92,24 +112,28 @@ function renderCards(){
 function renderChips(){
   const all=[...new Set(APPS.flatMap(a=>a.tags))].filter(t=>t!=='준비 중');
   const cnt=t=>APPS.filter(a=>a.tags.includes(t)).length;
-  chipsEl.innerHTML=[`<button type="button" class="chip on" data-tag="all" role="tab">전체<span class="n">${APPS.length}</span></button>`,...all.map(t=>`<button type="button" class="chip" data-tag="${esc(t)}" role="tab">${esc(t)}<span class="n">${cnt(t)}</span></button>`)].join('');
+  chipsEl.innerHTML=[`<button type="button" class="chip on" data-tag="all" aria-pressed="true">전체<span class="n">${APPS.length}</span></button>`,...all.map(t=>`<button type="button" class="chip" data-tag="${esc(t)}" aria-pressed="false">${esc(t)}<span class="n">${cnt(t)}</span></button>`)].join('');
   $$('.chip',chipsEl).forEach(c=>c.addEventListener('click',()=>setFilter(c.dataset.tag)));
 }
 function updateCount(){ const vis=$$('.file',grid).filter(c=>!c.hidden); const soon=vis.filter(c=>c.classList.contains('soon')).length; const priv=vis.filter(c=>c.dataset.private==='1'&&!c.classList.contains('soon')).length; const live=vis.length-soon-priv; $('#count').innerHTML=`서가의 봉인 <b>${vis.length}</b>통 · 열 수 있는 이야기 <b>${live}</b>편${priv?` · 비공개 <b>${priv}</b>편`:''} · 쓰는 중 <b>${soon}</b>편`; }
 function setFilter(t,silent){
   if(!$$('.chip',chipsEl).some(c=>c.dataset.tag===t)) t='all';
-  tag=t; $$('.chip',chipsEl).forEach(c=>c.classList.toggle('on',c.dataset.tag===t));
+  tag=t; $$('.chip',chipsEl).forEach(c=>{ const on=c.dataset.tag===t; c.classList.toggle('on',on); c.setAttribute('aria-pressed',on); });
   const apply=()=>{ $$('.file',grid).forEach(c=>{ c.hidden=!(t==='all'||c.dataset.tags.split('|').includes(t)); }); updateCount(); drawThread(false); };
   if(document.startViewTransition&&!reduced&&!silent){ document.startViewTransition(apply); } else apply();
   if(!silent&&!current&&about.hidden) history.replaceState(history.state,'',t==='all'?'/':'/#tag='+encodeURIComponent(t));
 }
 
 /* 봉인 사이를 잇는 별자리 */
-function drawThread(animate){
+let threadQ=false;
+function drawThread(animate){ if(animate){ drawThreadNow(true); return; } if(threadQ) return; threadQ=true; requestAnimationFrame(()=>{ threadQ=false; drawThreadNow(false); }); }
+function drawThreadNow(animate){
   const svg=$('#thread'), wrap=$('#boardWrap'), wr=wrap.getBoundingClientRect();
   const pts=$$('.file',grid).filter(c=>!c.hidden).map(c=>{const r=$('.seal',c).getBoundingClientRect();return {x:r.left+r.width/2-wr.left,y:r.top+r.height/2-wr.top}});
   svg.setAttribute('viewBox',`0 0 ${wr.width} ${wr.height}`); svg.setAttribute('width',wr.width); svg.setAttribute('height',wr.height);
   let d=''; for(let i=0;i<pts.length-1;i++){ const a=pts[i],b=pts[i+1]; const dist=Math.hypot(b.x-a.x,b.y-a.y); const sag=Math.min(60,dist*.14); const mx=(a.x+b.x)/2, my=(a.y+b.y)/2-sag; d+=`${i?'':'M'+a.x+' '+a.y} Q ${mx} ${my} ${b.x} ${b.y} `; }
+  const oldPath=$('path',svg), oldDots=$$('circle',svg);
+  if(!animate&&d&&oldPath&&oldDots.length===pts.length){ oldPath.setAttribute('d',d); oldDots.forEach((c,i)=>{ c.setAttribute('cx',pts[i].x); c.setAttribute('cy',pts[i].y); }); return; }
   svg.innerHTML=(d?`<path d="${d}" class="${animate&&!reduced?'draw':''}"></path>`:'')+pts.map((p,i)=>`<circle cx="${p.x}" cy="${p.y}" r="2.6" class="${i%2?'tw':''}" style="animation-delay:${i*.7}s"></circle>`).join('');
   const path=$('path',svg); if(path&&animate&&!reduced){ const len=path.getTotalLength(); path.style.setProperty('--len',len); }
 }
@@ -120,7 +144,8 @@ let revealed=false;
 function revealCards(){
   if(revealed||!APPS.length)return; revealed=true;
   const cards=$$('.file',grid); const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.remove('pre');e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.15});
-  cards.forEach((c,i)=>{ if(c.getBoundingClientRect().top>innerHeight){c.classList.add('pre');io.observe(c)} else { c.style.animationDelay=(i*90)+'ms'; c.classList.add('in'); } });
+  const tops=cards.map(c=>c.getBoundingClientRect().top);
+  cards.forEach((c,i)=>{ if(tops[i]>innerHeight){c.classList.add('pre');io.observe(c)} else { c.style.animationDelay=(i*90)+'ms'; c.classList.add('in'); } });
   setTimeout(()=>{ cards.forEach(c=>{ if(c.classList.contains('pre')){ c.classList.remove('pre'); c.classList.add('in'); } }); drawThread(false); },3500);
   grid.addEventListener('animationend',e=>{ if(e.target.classList&&e.target.classList.contains('file')) drawThread(false); });
   drawThread(true);
@@ -142,8 +167,9 @@ function bindCard(card){
   $('.run',card).addEventListener('click',e=>{ e.stopPropagation(); ripple(e); if(app.cardButton==='works'&&validWorks(app).length){ e.preventDefault(); const r=e.currentTarget.getBoundingClientRect(); slam('WORKS',r.left+r.width/2,r.top-10); openGallery(app.slug); return; } runApp(app,e); });
   $('.run',card).addEventListener('keydown',e=>e.stopPropagation()); // Enter가 카드 열기로 새지 않게
   $('.dl',card).addEventListener('click',e=>{ e.stopPropagation(); ripple(e); app.private?privateNotice(e):downloadApp(app,e); });
-  card.addEventListener('click',()=>{ if(!card.classList.contains('soon')) openCase(app.slug,card); else toast('아직 봉인이 마르지 않았습니다.'); });
-  card.addEventListener('keydown',e=>{ if((e.key==='Enter'||e.key===' ')&&!card.classList.contains('soon')){e.preventDefault();openCase(app.slug,card);} });
+  card.addEventListener('click',e=>{ const link=e.target.closest&&e.target.closest('.case-link');
+    if(link){ if(e.ctrlKey||e.metaKey||e.shiftKey||e.altKey||e.button) return; e.preventDefault(); }
+    if(!card.classList.contains('soon')) openCase(app.slug,card); else toast('아직 봉인이 마르지 않았습니다.'); });
 }
 function ripple(e){ const b=e.currentTarget; const r=b.getBoundingClientRect(); const s=document.createElement('span'); s.className='ripple'; const d=Math.max(r.width,r.height); s.style.cssText=`width:${d}px;height:${d}px;left:${e.clientX-r.left-d/2}px;top:${e.clientY-r.top-d/2}px`; b.appendChild(s); setTimeout(()=>s.remove(),650); }
 function slam(text,x,y){ if(reduced)return; const s=document.createElement('span'); s.className='slam'; s.textContent=text; s.style.left=x+'px'; s.style.top=y+'px'; document.body.appendChild(s); setTimeout(()=>s.remove(),1000); }
@@ -202,11 +228,12 @@ function fillDossier(app){
   $('#dFacts').hidden=!(app.facts&&app.facts.length);
   const shots=(app.screens&&app.screens.length)?app.screens.map((s,i)=>`<div class="shot" tabindex="0" data-src="${esc(s)}">${visHTML(app,s)}<span>장면 ${i+1}</span></div>`):[1,2,3].map(i=>`<div class="shot" tabindex="0">${visHTML(app)}<span>장면 ${i} · 스크린샷 준비 중</span></div>`);
   $('#dGal').innerHTML=(app.video?`<div class="shot video"><video src="${esc(app.video)}" controls playsinline preload="metadata"></video></div>`:'')+shots.join('');
-  $$('.shot:not(.video)',$('#dGal')).forEach(s=>{ s.addEventListener('click',()=>openLb(s.dataset.src?`<img src="${esc(s.dataset.src)}" alt="">`:s.innerHTML)); s.addEventListener('keydown',e=>{ if(e.key==='Enter') s.click(); }); });
+  const shotEls=$$('.shot:not(.video)',$('#dGal')), lbItems=shotEls.map((s,i)=>s.dataset.src?{src:s.dataset.src,alt:`${app.name} 장면 ${i+1}`}:{html:s.innerHTML});
+  shotEls.forEach((s,i)=>{ s.setAttribute('role','button'); s.addEventListener('click',()=>openLb(lbItems,i,s)); s.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); s.click(); } }); });
   renderWorks(app);
   $('#dStory').innerHTML='<p class="loading">봉인을 뜯는 중…</p>'; loadStory(app).then(h=>{ if(current&&current.slug===app.slug) $('#dStory').innerHTML=h; });
   $('#dFb').href=feedbackURL(app); if(SITE.feedbackForm){ $('#dFb').target='_blank'; $('#dFb').rel='noopener'; }
-  document.title=app.name+' · '+SITE_NAME;
+  setPage(pageOf(app));
 }
 function cardOf(slug){ return $(`.file[data-slug="${CSS.escape(slug)}"]`,grid); }
 function openCase(slug,card,push=true){
@@ -222,15 +249,15 @@ function openCase(slug,card,push=true){
   $('#dBack').focus({preventScroll:true});
 }
 function closeCase(viaHistory=false){
-  if(!current)return; if(!viewer.hidden) closeViewer(); const app=current, card=currentCard; current=null; document.title=SITE_NAME;
+  if(!current)return; if(!viewer.hidden) closeViewer(); const app=current, card=currentCard; current=null; setPage();
   if(!viaHistory){ if(pushed) history.back(); else history.replaceState(null,'','/'); }
   pushed=false;
   if(card&&!reduced&&!card.hidden){ const from=$('#dPhoto').getBoundingClientRect(); const to=$('.photo',card).getBoundingClientRect(); const g=document.createElement('div'); g.className='ghost'; g.innerHTML=visHTML(app);
     g.style.cssText=`left:${from.left}px;top:${from.top}px;width:${from.width}px;height:${from.height}px`; document.body.appendChild(g); dossier.classList.remove('ready');
     g.animate([{transform:'translate(0,0) scale(1,1)'},{transform:`translate(${to.left-from.left}px,${to.top-from.top}px) scale(${to.width/from.width},${to.height/from.height})`,opacity:.6}],{duration:460,easing:'cubic-bezier(.2,.8,.2,1)',fill:'forwards'}).onfinish=()=>g.remove(); }
-  dossier.classList.remove('on'); setTimeout(()=>{ dossier.hidden=true; dossier.classList.remove('ready'); if(gallery.hidden&&viewer.hidden) document.body.classList.remove('lock'); if(card) card.focus({preventScroll:true}); },420);
+  dossier.classList.remove('on'); setTimeout(()=>{ dossier.hidden=true; dossier.classList.remove('ready'); if(gallery.hidden&&viewer.hidden) document.body.classList.remove('lock'); if(card) focusAfter($('.case-link',card)||card); },420);
 }
-function step(dir){ const live=APPS.filter(a=>a.status!=='soon'); const i=live.findIndex(a=>a.slug===current.slug); const n=live[(i+dir+live.length)%live.length]; if(!n||n===current)return;
+function step(dir){ if(!current) return; /* 넘기는 60ms 사이엔 current가 비어 있다(← → 연타) */ const live=APPS.filter(a=>a.status!=='soon'); const i=live.findIndex(a=>a.slug===current.slug); const n=live[(i+dir+live.length)%live.length]; if(!n||n===current)return;
   dossier.classList.remove('ready'); current=null; setTimeout(()=>{ history.replaceState({view:'project',slug:n.slug},'','/project/'+encodeURIComponent(n.slug)); current=n; currentCard=cardOf(n.slug); fillDossier(n); dossier.scrollTo({top:0,behavior:reduced?'auto':'smooth'}); requestAnimationFrame(()=>dossier.classList.add('ready')); },60); }
 $('#dBack').addEventListener('click',()=>closeCase());
 dossier.addEventListener('click',e=>{ if(e.target===dossier) closeCase(); });
@@ -261,13 +288,13 @@ function openGallery(slug,push=true){
   $('#gToStory').onclick=()=>{ closeGallery(); if(!current||current.slug!==app.slug){ setTimeout(()=>openCase(app.slug,cardOf(app.slug)),80); } };
   if(gallery.hidden){ gallery.hidden=false; gallery.scrollTop=0; document.body.classList.add('lock'); requestAnimationFrame(()=>{ gallery.classList.add('on'); setTimeout(()=>gallery.classList.add('ready'),80); }); }
   if(push){ history.pushState({view:'works',slug},'','/project/'+encodeURIComponent(slug)+'/works'); galleryPushed=true; } else galleryPushed=false;
-  document.title=app.name+' 작품집 · '+SITE_NAME; $('#gBack').focus({preventScroll:true});
+  setPage({title:app.name+' 작품집',desc:`${app.name}의 작품 ${works.length}편 — 표지를 누르면 한 장씩 넘겨 읽을 수 있어요.`,path:'/project/'+encodeURIComponent(slug)+'/works'}); $('#gBack').focus({preventScroll:true});
 }
 function closeGallery(viaHistory=false){
   if(gallery.hidden) return; if(!viewer.hidden) closeViewer(); const app=galleryApp; galleryApp=null;
   gallery.classList.remove('on'); setTimeout(()=>{ gallery.hidden=true; gallery.classList.remove('ready'); if(dossier.hidden&&about.hidden&&viewer.hidden) document.body.classList.remove('lock'); },400);
   if(!viaHistory){ if(galleryPushed) history.back(); else history.replaceState(null,'',current?'/project/'+encodeURIComponent(current.slug):'/'); }
-  galleryPushed=false; document.title=current?current.name+' · '+SITE_NAME:SITE_NAME;
+  galleryPushed=false; setPage(current?pageOf(current):undefined);
 }
 $('#gBack').addEventListener('click',()=>closeGallery()); gallery.addEventListener('click',e=>{ if(e.target===gallery) closeGallery(); });
 const viewer=$('#viewer'), vStage=$('#vStage'); let V=null, vHintT=null;
@@ -324,16 +351,28 @@ $('#vAgain').addEventListener('click',()=>{ if(!V)return; $('#vEnd').hidden=true
 $('#vEnd').addEventListener('click',e=>{ if(e.target===$('#vEnd')) closeViewer(); });
 
 /* 라이트박스 */
-const lb=$('#lb'); function openLb(html){ $('#lbFrame').innerHTML=html; lb.hidden=false; requestAnimationFrame(()=>lb.classList.add('on')); }
-function closeLb(){ lb.classList.remove('on'); setTimeout(()=>lb.hidden=true,300); }
+/* 라이트박스: 상세의 장면들을 목록째 받아 ← → 키, 양옆 버튼(PC), 옆으로 밀기(폰)로 넘긴다. 닫으면 눌렀던 장면으로 포커스를 돌려준다 */
+const lb=$('#lb'); let LB=null;
+function openLb(items,i,from){ LB={items,i:i||0,from}; lbShow(); lb.hidden=false; requestAnimationFrame(()=>lb.classList.add('on')); $('#lbX').focus({preventScroll:true}); }
+function lbShow(){ const n=LB.items.length, it=LB.items[LB.i];
+  $('#lbFrame').innerHTML=it.src?`<img src="${esc(it.src)}" alt="${esc(it.alt||'')}" decoding="async" draggable="false">`:it.html;
+  $('#lbCnt').textContent=n>1?String(LB.i+1).padStart(2,'0')+' / '+String(n).padStart(2,'0'):''; $('#lbPrev').hidden=$('#lbNext').hidden=n<2;
+  const nx=LB.items[(LB.i+1)%n]; if(n>1&&nx.src){ const im=new Image(); im.src=nx.src; } }
+function lbStep(d){ if(!LB||LB.closing||LB.items.length<2) return; LB.i=(LB.i+d+LB.items.length)%LB.items.length; lbShow(); }
+function closeLb(){ if(lb.hidden||!LB||LB.closing) return; const mine=LB; mine.closing=true; lb.classList.remove('on'); /* 사라지는 0.3초 동안의 키 입력은 아래 겹(상세)으로 넘긴다 */ setTimeout(()=>{ if(LB!==mine) return; lb.hidden=true; LB=null; if(mine.from) focusAfter(mine.from); },300); }
 $('#lbX').addEventListener('click',closeLb); lb.addEventListener('click',e=>{ if(e.target===lb) closeLb(); });
+$('#lbPrev').addEventListener('click',()=>lbStep(-1)); $('#lbNext').addEventListener('click',()=>lbStep(1));
+(function(){ let sx=null, sy=0; const f=$('#lbFrame');
+  f.addEventListener('pointerdown',e=>{ sx=e.clientX; sy=e.clientY; });
+  f.addEventListener('pointerup',e=>{ if(sx===null) return; const dx=e.clientX-sx, dy=e.clientY-sy; sx=null; if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)*1.3) lbStep(dx<0?1:-1); });
+  f.addEventListener('pointercancel',()=>{ sx=null; }); })();
 
 /* ═══════════════ 소개 ═══════════════ */
 const about=$('#about'); let aboutPushed=false;
 function openAbout(push=true){ if(!about.hidden)return; if(current) closeCase(); about.hidden=false; document.body.classList.add('lock'); requestAnimationFrame(()=>{about.classList.add('on');setTimeout(()=>about.classList.add('ready'),120)});
-  if(push){ history.pushState({view:'about'},'','/about'); aboutPushed=true; } else aboutPushed=false; document.title='소개 · '+SITE_NAME; }
+  if(push){ history.pushState({view:'about'},'','/about'); aboutPushed=true; } else aboutPushed=false; setPage({title:'소개',desc:'도구리 작업실과 만드는 사람 도구리에 대하여 — 밤에는 이야기와 장난감을, 낮에는 교실에 쓸 것들을 만듭니다.',path:'/about'}); }
 function closeAbout(viaHistory=false){ if(about.hidden)return; about.classList.remove('on'); setTimeout(()=>{about.hidden=true;about.classList.remove('ready');document.body.classList.remove('lock');},400);
-  if(!viaHistory){ if(aboutPushed) history.back(); else history.replaceState(null,'','/'); } aboutPushed=false; document.title=SITE_NAME; }
+  if(!viaHistory){ if(aboutPushed) history.back(); else history.replaceState(null,'','/'); } aboutPushed=false; setPage(); }
 $('#aboutBtn').addEventListener('click',e=>{e.preventDefault();openAbout();}); $('#aClose').addEventListener('click',()=>closeAbout());
 about.addEventListener('click',e=>{ if(e.target===about) closeAbout(); });
 $('#aGo').addEventListener('click',()=>{ closeAbout(); });
@@ -344,9 +383,39 @@ $('#fxBtn').addEventListener('click',()=>{ store.set('dgr-motion',reduced?'on':'
 $('#fxBtn').title=reduced?'화면 효과 켜기':'화면 효과 끄기'; $('#fxBtn span').textContent=reduced?'효과 꺼짐':'효과';
 if(osReduced&&motionPref===null&&!store.get('dgr-motion-hint')){ store.set('dgr-motion-hint','1'); setTimeout(()=>toast('기기에 「움직임 줄이기」가 켜져 있어요. 어지러우면 위의 ✦ 효과 버튼으로 끌 수 있습니다.'),3200); }
 $('#brand').addEventListener('click',e=>{ e.preventDefault(); if(current) closeCase(); if(!about.hidden) closeAbout(); scrollTo({top:0,behavior:reduced?'auto':'smooth'}); });
+/* ═══════════════ 겹(오버레이) 포커스 관리 ═══════════════
+   맨 위 겹만 조작되도록 나머지(헤더·본문·푸터·아래 겹)는 inert — Tab이 뒤 화면으로 새지 않고, 화면 낭독기도 맨 위 겹만 읽는다.
+   위 겹이 닫히면 아래 겹에서 마지막으로 머물던 곳으로, 모두 닫히면 겹을 열기 전 자리로 포커스를 돌려준다. hidden 속성 변화만 지켜보므로 여는/닫는 함수는 손대지 않았다 */
+const LAYERS=[[viewer,80],[lb,70],[about,50],[gallery,44],[dossier,40]].map(([el,z])=>({el,z,last:null}));
+const BACKDROP=['#top','main','footer'].map(s=>$(s)).filter(Boolean);
+let topLayer=null, baseFocus=null;
+document.addEventListener('focusin',e=>{ const l=LAYERS.find(l=>l.el.contains(e.target)); if(l) l.last=e.target; else if(e.target!==document.body) baseFocus=e.target; });
+function syncInert(){
+  const top=LAYERS.filter(l=>!l.el.hidden).reduce((a,l)=>!a||l.z>a.z?l:a,null); if(top===topLayer) return;
+  BACKDROP.forEach(el=>{ el.inert=!!top; }); LAYERS.forEach(l=>{ l.el.inert=!!top&&l!==top&&!l.el.hidden; });
+  const ae=document.activeElement, lost=!ae||ae===document.body||!!(ae.closest&&ae.closest('[hidden]'));
+  if(top&&topLayer&&top.z<topLayer.z&&lost&&top.last&&top.last.isConnected) top.last.focus({preventScroll:true});
+  else if(!top&&lost&&baseFocus&&baseFocus.isConnected&&!baseFocus.closest('[hidden]')) baseFocus.focus({preventScroll:true});
+  topLayer=top; }
+const layerMO=new MutationObserver(syncInert); LAYERS.forEach(l=>layerMO.observe(l.el,{attributes:true,attributeFilter:['hidden']}));
+function focusAfter(el){ queueMicrotask(()=>{ syncInert(); if(el&&el.isConnected) el.focus({preventScroll:true}); }); }
+
+/* 이 이야기 주소 공유: 공유 시트가 있는 폰은 공유 시트, PC는 클립보드에 복사 */
+const nativeShare=!!navigator.share&&!fine;
+$('#dShare').textContent=nativeShare?'공유하기':'링크 복사';
+$('#dShare').addEventListener('click',async e=>{ const app=current; if(!app) return; const btn=e.currentTarget; const url=siteBase()+'/project/'+encodeURIComponent(app.slug);
+  if(nativeShare){ try{ await navigator.share({title:app.name+' · '+SITE_NAME,text:app.summary,url}); return; }catch(err){ if(err&&err.name==='AbortError') return; } }
+  let ok=false; try{ await navigator.clipboard.writeText(url); ok=true; }catch(err){
+    const t=document.createElement('textarea'); t.value=url; t.setAttribute('readonly',''); t.style.cssText='position:fixed;left:-9999px;top:0;opacity:0'; document.body.appendChild(t); t.select(); try{ ok=document.execCommand('copy'); }catch(x){} t.remove(); btn.focus({preventScroll:true}); }
+  toast(ok?'이야기 주소를 복사했어요. 붙여 넣어 보내 보세요.':'복사하지 못했어요 · '+url); });
+
+const typing=t=>!!(t&&t.closest&&t.closest('input,textarea,select,video,audio,[contenteditable]'));
 addEventListener('keydown',e=>{
   if(!viewer.hidden){ if(e.key==='Escape') closeViewer(); else if(e.key==='ArrowRight'||e.key===' '||e.key==='Enter'&&e.target===vStage){ e.preventDefault(); vStep(1); } else if(e.key==='ArrowLeft'){ e.preventDefault(); vStep(-1); } return; }
-  if(e.key==='Escape'){ if(!lb.hidden) closeLb(); else if(!gallery.hidden) closeGallery(); else if(current) closeCase(); else if(!about.hidden) closeAbout(); } });
+  if(!lb.hidden&&LB&&!LB.closing){ if(e.key==='Escape') closeLb(); else if(e.key==='ArrowRight'){ e.preventDefault(); lbStep(1); } else if(e.key==='ArrowLeft'){ e.preventDefault(); lbStep(-1); } return; }
+  if(e.key==='Escape'){ if(!gallery.hidden) closeGallery(); else if(current) closeCase(); else if(!about.hidden) closeAbout(); return; }
+  /* 상세에서 ← → 로 이전·다음 이야기 (Alt+←는 브라우저 뒤로 가기라 건드리지 않는다) */
+  if((e.key==='ArrowLeft'||e.key==='ArrowRight')&&current&&gallery.hidden&&about.hidden&&!e.altKey&&!e.ctrlKey&&!e.metaKey&&!e.shiftKey&&!typing(e.target)){ e.preventDefault(); step(e.key==='ArrowRight'?1:-1); } });
 
 /* ═══════════════ 주소 → 화면 ═══════════════ */
 function parseLocation(){ const q=new URLSearchParams(location.search); let w=location.pathname.match(/^\/project\/([^/]+)\/works\/?$/); if(w) return {view:'works',slug:decodeURIComponent(w[1])};
@@ -435,19 +504,21 @@ function shelfOrder(list){
 async function boot(){
   try{
     const q=BUILD?'?v='+BUILD:'';
-    const [r,ro]=await Promise.all([fetch('/data/apps.json'+q,{cache:'no-cache'}),fetch('/data/overrides.json'+q,{cache:'no-cache'}).catch(()=>null)]); if(!r.ok) throw new Error(r.status);
+    /* index.html이 같은 주소로 미리 받아 둔(preload) 응답을 그대로 쓴다. 신선도는 vercel.json의 max-age=0, must-revalidate가 지킨다 */
+    const [r,ro]=await Promise.all([fetch('/data/apps.json'+q),fetch('/data/overrides.json'+q).catch(()=>null)]); if(!r.ok) throw new Error(r.status);
     const data=await r.json(); let ov={}; try{ if(ro&&ro.ok){ const oj=await ro.json(); ov=(oj&&oj.apps)||{}; } }catch(e){}
     /* data/overrides.json(관리 화면이 쓰는 파일)이 apps.json(코드와 함께 배포되는 기본값) 위에 덮인다 — 새 버전을 올려도 올린 작품·고친 글이 남는 이유 */
     const OVK=['works','summary','notice','story','pin','allowRun','allowDownload','private'];
     SITE=data.site||{}; APPS=shelfOrder((data.apps||[]).map(a=>{ const o=ov[a.slug]; if(!o||typeof o!=='object') return a; const m={...a}; for(const k of OVK) if(k in o) m[k]=o[k]; return m; }));
   }catch(e){
-    grid.innerHTML='<div class="loading err">앱 목록(data/apps.json)을 읽지 못했습니다.<br>파일을 직접 열면(file://) 읽을 수 없어요 — 저장소 폴더에서 <code>npx serve -s .</code> 로 띄운 뒤 열어 주세요.</div>';
+    grid.removeAttribute('aria-busy'); grid.innerHTML='<div class="loading err">앱 목록(data/apps.json)을 읽지 못했습니다.<br>파일을 직접 열면(file://) 읽을 수 없어요 — 저장소 폴더에서 <code>npx serve -s .</code> 로 띄운 뒤 열어 주세요.</div>';
     return;
   }
   if(!(window.CSS&&CSS.supports&&CSS.supports('scrollbar-gutter','stable'))){ const sbw=innerWidth-document.documentElement.clientWidth; if(sbw>0) document.documentElement.style.setProperty('--sbw',sbw+'px'); }
   /* 편지 보내기(푸터·소개): 폼 주소를 실제로 링크에 채운다 — 전에는 href="#"인 채라 눌러도 아무 일이 없었다 */
   const fb=feedbackURL(); ['#fbLink','#aFb'].forEach(id=>{ const a=$(id); if(!a) return; a.href=fb; if(SITE.feedbackForm){ a.target='_blank'; a.rel='noopener'; } });
-  renderWhispers(); renderCards(); renderChips(); updateCount();
+  renderWhispers(); renderCards(); renderChips(); updateCount(); grid.removeAttribute('aria-busy');
+  setPage(); injectListLd();
   setFilter(parseTag(),true);
   if(document.body.classList.contains('go')) revealCards();
   const l=parseLocation();
@@ -455,7 +526,12 @@ async function boot(){
   if(l.view==='project') setTimeout(()=>openCase(l.slug,cardOf(l.slug),false),delay);
   else if(l.view==='works') setTimeout(()=>{ openCase(l.slug,cardOf(l.slug),false); openGallery(l.slug,false); },delay); /* 딥링크: 상세를 밑에 깔고 갤러리를 연다 */
   else if(l.view==='about') setTimeout(()=>openAbout(false),delay);
-  if(document.fonts) document.fonts.ready.then(()=>drawThread(false));
+  /* 웹폰트 CSS가 비동기로 붙어서 fonts.ready가 글꼴보다 먼저 끝날 수 있다 — 글꼴이 늦게 도착할 때마다(loadingdone) 별자리·속삭임 자리를 다시 잡는다 */
+  if(document.fonts){ document.fonts.ready.then(()=>drawThread(false)); if(document.fonts.addEventListener) document.fonts.addEventListener('loadingdone',()=>{ drawThread(false); fitWhispers(); }); }
 }
+/* 서가 목록을 구조화 데이터(ItemList)로 — 검색엔진이 이야기 주소들을 한 번에 알 수 있게 */
+function injectListLd(){ try{ const base=siteBase(); const s=document.createElement('script'); s.type='application/ld+json';
+  s.textContent=JSON.stringify({'@context':'https://schema.org','@type':'ItemList',name:'봉인된 이야기들',itemListElement:APPS.filter(a=>a.status!=='soon').map((a,i)=>({'@type':'ListItem',position:i+1,url:base+'/project/'+encodeURIComponent(a.slug),name:a.name}))});
+  document.head.appendChild(s); }catch(e){} }
 boot();
 })();

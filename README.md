@@ -13,11 +13,12 @@ doguri-studio/
 ├─ admin.html + assets/js/admin.js   관리 화면 (/admin)
 ├─ api/admin.js            관리 화면의 서버 쪽 (Vercel 함수) — 로그인 검사 · GitHub 커밋 대행
 ├─ robots.txt, sitemap.xml
+├─ site.webmanifest        홈 화면에 추가할 때의 이름·아이콘·색
 ├─ tools/stamp.py           배포 전 캐시 스탬프(?v=) 갱신 · tools/make-zip.sh  배포 zip(관리 화면 소유 파일 제외)
 ├─ assets/
 │  ├─ css/site.css         디자인 토큰 + 모든 스타일
 │  ├─ js/site.js           apps.json 읽기 · 카드 · 필터 · 상세 전환 · 효과
-│  └─ img/                 favicon.svg, og.jpg(링크 공유 미리보기)
+│  └─ img/                 favicon.svg, og.jpg(링크 공유 미리보기), apple-touch-icon.png·icon-192/512·icon-maskable-512(홈 화면 아이콘)
 ├─ data/
 │  ├─ apps.json            ★ 앱 목록 기본값(코드와 함께 배포)
 │  └─ overrides.json       관리 화면이 쓰는 덮어쓰기(작품집·소개·고정·공개 설정) — zip에 안 들어감
@@ -156,7 +157,7 @@ A(비밀번호)만 넣어도 되고, B(구글)만 넣어도 되고, 둘 다 넣�
 python3 tools/stamp.py
 ```
 
-`index.html`·`admin.html`이 부르는 `site.css?v=…`, `site.js?v=…`, `admin.js?v=…`의 `v=`를 지금 시각으로 바꾼다(site.js는 그 값을 `/data/apps.json?v=…`에도 붙인다). HTML은 항상 새로 받아지므로, 폰·PC 어느 브라우저가 옛 CSS/JS를 캐시에 쥐고 있어도 **배포 즉시 새 파일**을 받는다. Claude가 zip을 만들 때 자동으로 돌리지만, 직접 CSS/JS를 고쳐 올릴 때도 한 번 돌리면 "폰에서만 옛 화면" 같은 일이 없다. (PC와 모바일은 같은 파일 한 벌이다 — 따로 있는 모바일 페이지는 없다.)
+`index.html`·`admin.html`이 부르는 `site.css?v=…`, `site.js?v=…`, `admin.js?v=…`의 `v=`를 지금 시각으로 바꾼다(site.js는 그 값을 `/data/apps.json?v=…`에도 붙인다). `index.html` 머리의 앱 목록 미리 받기(`<link rel="preload" href="/data/apps.json?v=…">`, overrides.json도)도 같은 값으로 맞춘다 — site.js가 요청하는 주소와 글자 하나까지 같아야 미리 받은 응답을 그대로 쓴다(다르면 한 번 더 받을 뿐 고장 나지는 않는다). HTML은 항상 새로 받아지므로, 폰·PC 어느 브라우저가 옛 CSS/JS를 캐시에 쥐고 있어도 **배포 즉시 새 파일**을 받는다. Claude가 zip을 만들 때 자동으로 돌리지만, 직접 CSS/JS를 고쳐 올릴 때도 한 번 돌리면 "폰에서만 옛 화면" 같은 일이 없다. (PC와 모바일은 같은 파일 한 벌이다 — 따로 있는 모바일 페이지는 없다.)
 
 ## 로컬에서 보기
 
@@ -180,6 +181,8 @@ npx serve -s .
 
 ## 아직 비어 있는 자리
 
+- 이야기별 링크 미리보기 — 카카오톡·페이스북 미리보기는 JS를 실행하지 않아, `/project/<slug>`를 보내도 지금은 사이트 공통 제목·이미지(og.jpg)가 나온다(검색엔진처럼 JS를 읽는 곳에는 이야기별 제목·설명이 반영된다). 이야기별로 다르게 하려면 서버(Vercel 함수나 미들웨어)가 주소에 맞춰 `<meta>`를 바꿔 내보내야 한다
+- `media/card-novel/works/w20260909-066l/` — 어디에서도 쓰지 않는 폴더(「주파수 72.4」를 처음 올렸을 때의 사본으로 보임, 608KB). 방문자가 받는 일은 없으니 지워도 되고 그냥 둬도 된다
 - `site.feedbackForm` — 구글 폼 주소 (비어 있으면 "준비 중" 안내)
 - 탐정게임 — 지금은 `private: true`로 비공개(실행·다운로드 누르면 "비공개입니다"). 공개할 때 `apps/nooneleft/README.md` 참고
 - 아침 책상 — 지금은 claude.ai 아티팩트로 연결(external). 공개 API로 갱신을 다시 만들면 `apps/morning-desk/`에 넣고 hosted로 전환
@@ -201,4 +204,13 @@ npx serve -s .
 - 효과 성능 원칙(2026-09-08 PC 끊김 보고 후): 화면 전체 레이어에 `mix-blend-mode`를 쓰지 않는다(grain·torch), 촛불은 1000px 원을 `transform`으로만 옮긴다, 포인터 처리는 rAF에 묶고 레이아웃 읽기(getBoundingClientRect)는 진입 시 한 번만, 먼지 캔버스는 DPR 1·30fps이고 오버레이(`body.lock`)가 덮이면 먼지·촛불·안개 애니메이션을 멈춘다(backdrop-filter가 매 프레임 다시 흐려지는 걸 막음), 월광경(.lens)은 left/top 대신 transform.
 - 상단 헤더는 스크롤 중 **높이를 바꾸지 않는다**(compact는 배경·블러·브랜드 축소만). 높이를 바꾸면 문서 길이→scrollY→compact 토글이 서로 물고 흔들리는 버그가 생긴다(2026-09-08 수정). 전환 기준도 내려갈 때 64px·올라올 때 16px로 두었다.
 - 서체는 Google Fonts(Nanum Myeongjo, Noto Sans KR, IBM Plex Mono — OFL)에서 불러온다. IBM Plex Mono는 영문·숫자 라벨(No. 01, SEALED, 날짜)에만 쓰고, 한글이 섞이는 글은 전부 Noto Sans KR(`--label`)이다.
+- 웹폰트 CSS는 **화면 그리기를 막지 않게** 받는다(2026-11): `<link rel="preload" as="style" onload="this.rel='stylesheet'">` + JS가 꺼진 경우를 위한 `<noscript>`. 한글 폰트 파일이 40개 가까이(약 580KB) 되어, 예전처럼 막고 기다리면 폰에서 첫 화면이 수 초 늦었다. 그동안은 기기 글꼴로 먼저 보이고 도착하면 교체된다(display=swap). 글꼴이 늦게 도착할 때마다(`document.fonts`의 `loadingdone`) 별자리 선·속삭임 위치를 다시 잡는다.
+- **레이아웃 밀림(CLS) 방지**(2026-11): 웹폰트가 기기 글꼴과 바뀔 때 줄바꿈이 달라지면 서가 전체가 밀린다. 그래서 히어로 제목 폭은 글꼴마다 달라지는 `ch` 대신 `em`(`max-width:9em`), 폰(≤480px)에서는 「촛불을 움직이면…」 안내를 늘 버튼 아랫줄에 둔다. 앱 목록이 오기 전에는 자리표시 카드 4장(`.file.skel`)과 칩 줄 높이(`.chips:empty`, 폰은 두 줄)를 잡아 둔다.
+- 앱 목록(`apps.json`·`overrides.json`)은 `index.html`이 CSS·JS와 함께 미리 받는다(preload) — site.js가 실행된 뒤에 요청을 시작하던 한 번의 왕복을 줄여 카드가 더 빨리 뜬다.
+- 서가 카드의 **제목이 진짜 링크**(`<a class="case-link" href="/project/<slug>">`)다(2026-11). 예전엔 카드 전체가 `role="button"`이었는데 그 안에 실행·다운로드 버튼이 또 있어 접근성 규칙 위반이었고, 검색엔진이 따라갈 이야기 주소 링크도 없었다. 카드 어디를 눌러도 열리는 건 그대로이고, 제목을 Ctrl/⌘·가운데 버튼으로 누르면 새 탭에서 열린다. 키보드는 Tab으로 제목에 와서 Enter.
+- 겹(상세·작품집·뷰어·라이트박스·소개)이 열리면 맨 위 겹만 조작되도록 나머지(헤더·본문·푸터·아래 겹)에 `inert`를 건다 — Tab이 뒤 화면으로 새지 않는다. 위 겹이 닫히면 아래 겹에서 머물던 곳으로, 다 닫히면 열기 전 자리로 포커스가 돌아온다(site.js `syncInert`, `hidden` 속성 변화만 지켜본다). 인트로는 Enter·Space·Esc로도 건너뛴다.
+- 상세에서 **← →** 키로 이전·다음 이야기, 「장면들」 라이트박스는 ← → 키·양옆 버튼(PC)·옆으로 밀기(폰)로 넘기고 `02 / 05`처럼 몇 번째인지 보인다. 상세 아래 **링크 복사**(폰은 **공유하기** — 기기 공유 시트)로 이야기 주소를 보낼 수 있다.
+- 화면이 바뀔 때마다 `title`·`description`·`og:title/description/url`·`canonical`을 그 화면(이야기·작품집·소개)에 맞춘다(site.js `setPage`). `canonical`은 일부러 HTML에 적지 않았다 — `/project/<slug>`도 같은 index.html이라 고정해 두면 모든 이야기 주소가 홈의 사본으로 취급된다. 서가 목록은 구조화 데이터(JSON-LD `ItemList`)로, 사이트 정보는 `WebSite`로 넣는다. 링크 미리보기 이미지(`og:image`)는 카카오톡·페이스북이 읽을 수 있게 **전체 주소**로 적는다.
+- 효과 성능(2026-11 추가): 별자리 선은 한 프레임에 여러 번 요청돼도 한 번만 그리고 점 개수가 같으면 좌표만 고친다(그리던 애니메이션이 끊기지 않게), 커서 링은 포인터를 따라잡으면 rAF를 쉰다, 먼지 개수는 화면 넓이에 비례(폰 40 ~ 큰 화면 90), 스크롤 처리는 프레임당 한 번, 속삭임을 셋 다 들으면 거리 계산을 멈춘다. 카드 뷰어 높이는 폰 주소창을 뺀 실제 높이(`100dvh`)로 잡아 카드 아래가 툴바에 가리지 않는다.
+- 카드 썸네일(800px)은 카드에 비해 크지만 일부러 그대로 둔다 — PC에서 사진 위에 올리는 월광경(.lens)이 2.1배로 확대해 보여 주기 때문이다.
 - `assets/`·`data/`는 브라우저가 매번 서버에 새 버전을 묻도록(`max-age=0, must-revalidate`) 해 두었다. 배포 뒤에도 옛 화면이 보이면 한 번만 강력 새로고침(Ctrl+F5 / 모바일은 탭 닫고 다시 열기)하면 된다.

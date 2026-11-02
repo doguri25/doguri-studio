@@ -5,22 +5,38 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>도구리 작업실</title>
 <meta name="description" content="도구리가 만든 창작 도구와 게임을 밤의 서가에 봉인해 둔 작업실.">
+<meta name="author" content="도구리">
+<!-- 링크 공유 미리보기(카카오톡·페이스북 등): 이미지는 반드시 전체 주소로. 이야기별 제목·설명은 site.js가 열 때마다 바꾼다 -->
 <meta property="og:type" content="website">
+<meta property="og:site_name" content="도구리 작업실">
 <meta property="og:title" content="도구리 작업실">
 <meta property="og:description" content="이야기와 장난감 사이. 밤에 만든 웹 도구들을 편지처럼 봉인해 두었습니다.">
-<meta property="og:image" content="/assets/img/og.jpg">
+<meta property="og:image" content="https://doguri-studio.vercel.app/assets/img/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="보름달 아래 「도구리의 작업실」 제목과 밀랍 봉인">
 <meta property="og:locale" content="ko_KR">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#090a11">
 <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap">
-<link rel="stylesheet" href="/assets/css/site.css?v=202609081934">
+<!-- 웹폰트 CSS는 화면 그리기를 막지 않게 받는다: preload로 미리 받고 도착하면 stylesheet로 붙인다(그동안은 기기 글꼴 → display=swap으로 교체) -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&amp;family=Noto+Sans+KR:wght@400;500;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&amp;family=Noto+Sans+KR:wght@400;500;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap"></noscript>
+<link rel="stylesheet" href="/assets/css/site.css?v=202611020400">
+<!-- 앱 목록은 site.js를 기다리지 않고 CSS·JS와 함께 미리 받는다(주소의 v=는 site.js의 v=와 같아야 재사용된다 — tools/stamp.py가 함께 맞춘다) -->
+<link rel="preload" href="/data/apps.json?v=202611020400" as="fetch" crossorigin>
+<link rel="preload" href="/data/overrides.json?v=202611020400" as="fetch" crossorigin>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebSite","name":"도구리 작업실","url":"https://doguri-studio.vercel.app/","inLanguage":"ko","description":"도구리가 만든 창작 도구와 게임을 밤의 서가에 봉인해 둔 작업실.","author":{"@type":"Person","name":"도구리"}}
+</script>
 </head>
 <body class="site">
 
-<div id="intro" role="button" aria-label="건너뛰기">
+<div id="intro" role="button" tabindex="0" aria-label="인트로 건너뛰기">
   <div class="env">
     <div class="letter"><small>A LETTER FROM THE STUDIO</small><b>도구리 작업실</b><i>밤에 열리는 이야기들 · 창작 도구 · 게임</i></div>
     <div class="pocket"></div>
@@ -66,10 +82,16 @@
       <h2><small>THE NIGHT SHELF</small>봉인된 이야기들</h2>
       <div class="count" id="count"></div>
     </div>
-    <div class="chips" id="chips" role="tablist" aria-label="태그 필터"></div>
+    <div class="chips" id="chips" role="group" aria-label="태그로 거르기"></div>
     <div class="board-wrap" id="boardWrap">
       <svg class="thread" id="thread" aria-hidden="true"></svg>
-      <div class="grid" id="grid"><div class="loading">서가를 여는 중…</div></div>
+      <div class="grid" id="grid" aria-busy="true"><!-- 앱 목록이 오기 전 자리 잡기(레이아웃이 밀리지 않게) — site.js가 진짜 카드로 바꾼다 -->
+        <article class="file skel" aria-hidden="true"><div class="inner"><div class="photo"></div><div class="meta"><h3></h3><p></p><div class="tags"><span>&nbsp;</span></div></div><div class="acts"><span class="btn line">&nbsp;</span></div></div></article>
+        <article class="file skel" aria-hidden="true"><div class="inner"><div class="photo"></div><div class="meta"><h3></h3><p></p><div class="tags"><span>&nbsp;</span></div></div><div class="acts"><span class="btn line">&nbsp;</span></div></div></article>
+        <article class="file skel" aria-hidden="true"><div class="inner"><div class="photo"></div><div class="meta"><h3></h3><p></p><div class="tags"><span>&nbsp;</span></div></div><div class="acts"><span class="btn line">&nbsp;</span></div></div></article>
+        <article class="file skel" aria-hidden="true"><div class="inner"><div class="photo"></div><div class="meta"><h3></h3><p></p><div class="tags"><span>&nbsp;</span></div></div><div class="acts"><span class="btn line">&nbsp;</span></div></div></article>
+        <p class="sr-only">서가를 여는 중…</p>
+      </div>
     </div>
     <div class="mist" aria-hidden="true"></div>
   </section>
@@ -98,13 +120,13 @@
     <div class="sec st" style="--i:6"><h3>장면들</h3><div class="gal" id="dGal"></div></div>
     <div class="sec st" style="--i:7"><h3>이 이야기의 시작</h3><div class="story" id="dStory"></div></div>
     <div class="d-foot st" style="--i:8">
-      <a class="fb" href="#" id="dFb">이 이야기에 답장하기 →</a>
+      <div class="links"><a class="fb" href="#" id="dFb">이 이야기에 답장하기 →</a><button type="button" class="fb share" id="dShare">링크 복사</button></div>
       <div class="nav"><button type="button" id="dPrev">← 이전 이야기</button><button type="button" id="dNext">다음 이야기 →</button></div>
     </div>
   </div>
 </div>
 
-<div class="about" id="about" hidden role="dialog" aria-modal="true">
+<div class="about" id="about" hidden role="dialog" aria-modal="true" aria-labelledby="aTitle">
   <button type="button" class="x" id="aClose">닫기 ✕</button>
   <div class="a-inner">
     <div class="card3d st" id="nameCard" style="--i:1" title="뒤집기">
@@ -114,7 +136,7 @@
       </div>
     </div>
     <div class="a-text">
-      <h2 class="st" style="--i:2">이 작업실에 대하여</h2>
+      <h2 class="st" id="aTitle" style="--i:2">이 작업실에 대하여</h2>
       <p class="st" style="--i:3">도구리 작업실은 제가 만든 창작 도구와 게임, 교실에서 쓰는 앱을 한곳에 모아 둔 개인 서가입니다. 카드소설을 만드는 도구, 피구 게임, 포토부스, 시작 페이지처럼 스스로 필요해서 만든 것들이라, 하나하나 "왜 만들었는지"의 이야기가 붙어 있습니다. 서가는 계속 늘어납니다.</p>
       <p class="st" style="--i:4">사이트는 프레임워크 없이 HTML·CSS·JavaScript만으로 만들었고, 앱 목록은 JSON 파일로 관리합니다. 앱은 방문자의 브라우저에서만 실행되며, 저장 기능이 있는 앱도 데이터는 여러분의 브라우저 안에만 남습니다. 의견이나 고장 신고는 아래 <b>편지 보내기</b>로 — 앱 이름만 골라 몇 줄 적어 주시면 됩니다.</p>
       <div class="row st" style="--i:5"><a class="btn line" href="#" id="aFb">편지 보내기</a><a class="btn line" href="#apps" id="aGo">이야기 보러 가기</a></div>
@@ -140,9 +162,9 @@
   <div class="v-bottom"><div class="v-dots" id="vDots"></div><div class="v-hint" id="vHint">← → 키나 옆으로 밀어서 넘기기</div></div>
   <div class="v-end" id="vEnd" hidden><span class="k">THE END</span><b id="vEndTitle"></b><p>여기까지가 이번 이야기입니다.</p><div class="row"><button type="button" class="btn line" id="vAgain">처음부터 다시</button><button type="button" class="btn gold" id="vClose2">서가로 돌아가기</button></div></div>
 </div>
-<div class="lb" id="lb" hidden><button type="button" class="x" id="lbX">닫기 ✕</button><div class="frame" id="lbFrame"></div></div>
+<div class="lb" id="lb" hidden role="dialog" aria-modal="true" aria-label="장면 크게 보기"><span class="cnt" id="lbCnt"></span><button type="button" class="x" id="lbX">닫기 ✕</button><div class="frame" id="lbFrame"></div><button type="button" class="v-nav prev" id="lbPrev" aria-label="이전 장면">‹</button><button type="button" class="v-nav next" id="lbNext" aria-label="다음 장면">›</button></div>
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script src="/assets/js/site.js?v=202609081934" defer></script>
+<script src="/assets/js/site.js?v=202611020400" defer></script>
 </body>
 </html>
