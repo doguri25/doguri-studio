@@ -92,7 +92,7 @@ addEventListener('scroll',()=>{ whisperBoxT=0; if(scrollQ) return; scrollQ=true;
 /* ═══════════════ 그림·썸네일 ═══════════════ */
 function artHTML(kind){ return `<div class="art ${kind||'soon-art'}">${kind==='cards'?'<i></i><i></i><i></i>':kind==='sun'?'<i></i><i></i>':'<i></i>'}</div>`; }
 /* 스크린샷이 있으면 사진, 없으면 벡터 그림 */
-function visHTML(app,src){ const s=src||app.thumb; return `<div class="vis">${artHTML(app.art)}${s?`<img src="${esc(s)}" alt="${esc(app.name)} 화면" loading="lazy" decoding="async">`:''}</div>`; }
+function visHTML(app,src){ const s=src||app.thumb; return `<div class="vis">${artHTML(app.art)}${s?`<img src="${esc(s)}" alt="${esc(app.name)} 화면" loading="lazy">`:''}</div>`; }
 
 /* ═══════════════ 서가 렌더 ═══════════════ */
 const grid=$('#grid'), chipsEl=$('#chips'); let tag='all';
@@ -504,8 +504,10 @@ function shelfOrder(list){
 async function boot(){
   try{
     const q=BUILD?'?v='+BUILD:'';
-    /* index.html이 같은 주소로 미리 받아 둔(preload) 응답을 그대로 쓴다. 신선도는 vercel.json의 max-age=0, must-revalidate가 지킨다 */
-    const [r,ro]=await Promise.all([fetch('/data/apps.json'+q),fetch('/data/overrides.json'+q).catch(()=>null)]); if(!r.ok) throw new Error(r.status);
+    /* index.html이 미리 받아 둔(preload) 응답을 그대로 쓰도록, 그 <link>에 적힌 주소를 글자 그대로 요청한다(배포 쪽에서 ?v= 스탬프를 다르게 찍어도 어긋나지 않게).
+       신선도는 vercel.json의 max-age=0, must-revalidate가 지킨다 */
+    const pre=name=>{ const l=document.querySelector(`link[rel="preload"][href^="/data/${name}"]`); return l?l.getAttribute('href'):'/data/'+name+q; };
+    const [r,ro]=await Promise.all([fetch(pre('apps.json')),fetch(pre('overrides.json')).catch(()=>null)]); if(!r.ok) throw new Error(r.status);
     const data=await r.json(); let ov={}; try{ if(ro&&ro.ok){ const oj=await ro.json(); ov=(oj&&oj.apps)||{}; } }catch(e){}
     /* data/overrides.json(관리 화면이 쓰는 파일)이 apps.json(코드와 함께 배포되는 기본값) 위에 덮인다 — 새 버전을 올려도 올린 작품·고친 글이 남는 이유 */
     const OVK=['works','summary','notice','story','pin','allowRun','allowDownload','private'];
