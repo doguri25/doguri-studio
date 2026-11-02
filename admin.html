@@ -153,12 +153,12 @@ body{background-image:radial-gradient(ellipse 60% 40% at 90% 0%, rgba(128,112,20
 </head>
 <body>
 <div class="a-wrap" id="top-of-page">
-  <div class="a-top"><a class="brand" href="/"><i></i>도구리 작업실<small>ADMIN</small></a><a class="home" href="/">← 사이트로</a></div>
+  <div class="a-top"><a class="brand" href="/"><i></i>도구리 작업실<small>ADMIN</small></a><span style="display:flex;gap:14px"><a class="home" href="/shots">스크린샷 올리기</a><a class="home" href="/">← 사이트로</a></span></div>
   <nav class="qnav" id="qnav" aria-label="관리 메뉴"><a href="#pLogin" data-p="pLogin"><b>01</b>관리자</a><a href="#pWorks" data-p="pWorks" hidden><b>02</b>작품집</a><a href="#pNew" data-p="pNew" hidden><b>03</b>새 작품</a><a href="#pText" data-p="pText" hidden><b>04</b>소개·공개</a><a href="#pOrder" data-p="pOrder" hidden><b>05</b>서가 순서</a><a href="#top-of-page" class="up" title="맨 위로">↑</a></nav>
 
   <section class="panel" id="pLogin">
     <h2><span class="step">01</span>관리자 확인</h2>
-    <p class="desc" id="loginDesc">관리자만 들어올 수 있는 문입니다. 확인은 서버에서 하고, 저장소 열쇠(GitHub 토큰)는 브라우저로 내려오지 않아요.</p>
+    <p class="desc" id="loginDesc">관리자만 들어올 수 있는 문입니다. 확인은 서버에서 하고, 저장소 열쇠(Supabase 서비스 키)는 브라우저로 내려오지 않아요.</p>
     <div id="loginBox">
       <div class="login-methods" id="loginMethods" hidden>
         <div class="lm" id="lmGoogle" hidden><div id="gsi"></div><span class="hint">허용된 구글 계정으로만 열립니다.</span></div>
@@ -182,7 +182,7 @@ body{background-image:radial-gradient(ellipse 60% 40% at 90% 0%, rgba(128,112,20
 
   <section class="panel" id="pNew" hidden>
     <h2><span class="step">03</span>새 작품 올리기</h2>
-    <p class="desc">카드 이미지를 넣고 순서를 맞춘 뒤 게시하면, 사진은 자동으로 줄여서(긴 변 1080px) 저장소에 올라가고 약 1분 뒤 사이트에 나타납니다. 새 작품은 작품집 <b>맨 앞</b>에 놓이고, 상세 화면에는 앞의 네 편만 보이며 나머지는 「작품 모두 보기」에서 봅니다.</p>
+    <p class="desc">카드 이미지를 넣고 순서를 맞춘 뒤 게시하면, 사진은 자동으로 줄여서(긴 변 1080px) 올라가고 몇 초 뒤 사이트에 나타납니다. 새 작품은 작품집 <b>맨 앞</b>에 놓이고, 상세 화면에는 앞의 네 편만 보이며 나머지는 「작품 모두 보기」에서 봅니다.</p>
     <div class="fields">
       <div class="field"><label>제목</label><input id="wTitle" placeholder="예) 젖지 않은 우산"></div>
       <div class="field"><label>날짜</label><input id="wDate" placeholder="2026.09"></div>
@@ -202,7 +202,7 @@ body{background-image:radial-gradient(ellipse 60% 40% at 90% 0%, rgba(128,112,20
     <h2><span class="step">04</span>앱 소개 글 · 공개 설정</h2>
     <p class="desc">상세 화면의 <b>제목 밑 한 줄 소개</b>, <b>속삭임</b>(노란 안내 상자), <b>이 이야기의 시작</b>(긴 글)을 여기서 바로 고칩니다. 아래 <b>공개 설정</b>에서 실행·다운로드 버튼을 켜고 끄거나 앱을 비공개로 돌릴 수도 있어요. 저장하면 약 1분 뒤 사이트에 반영돼요.</p>
     <div class="fields">
-      <div class="field"><label>어느 앱인가요</label><select id="tAppSel"></select></div>
+      <div class="field"><label>어느 앱인가요</label><select id="tAppSel"></select><a class="btn line" id="tShots" href="/shots" style="align-self:flex-start;margin-top:4px;text-decoration:none">이 앱의 스크린샷 올리기 →</a><span class="hint">상세 화면의 장면들과 카드 대표 이미지를 폰 사진첩에서 바로 올립니다. 배포 없이 곧바로 반영돼요.</span></div>
       <div class="field wide toggles" id="tToggles">
         <label>공개 설정</label>
         <div class="tg-row">

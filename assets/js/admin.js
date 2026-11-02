@@ -1,7 +1,7 @@
 /* 도구리 작업실 — admin.js
-   브라우저는 /api/admin 하고만 이야기한다. GitHub 토큰은 Vercel 환경변수에만 있고 여기엔 없다.
+   브라우저는 /api/admin 하고만 이야기한다. 저장소 열쇠(Supabase 서비스 키)는 Vercel 환경변수에만 있고 여기엔 없다.
    흐름: 로그인(구글 또는 비밀번호) → 세션 토큰(12시간, localStorage) → apps.json+overrides.json 읽기 → 작품 편집/새 작품
-        → 이미지 축소 → 블롭 업로드(장당 1요청) → 커밋 1개 → Vercel 자동 배포 → 사이트에서 확인 */
+        → 이미지 축소 → 이미지 업로드(장당 1요청, 스토리지) → 게시 1요청(overrides·글은 Supabase 표) → 배포 없이 사이트에 바로 반영 */
 (() => {
 'use strict';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
@@ -23,7 +23,7 @@ async function api(op,body,opts={}){
 /* 기본값(apps.json, 코드와 함께 배포)과 덮어쓰기(overrides.json, 관리 화면이 소유)를 읽어 합친다.
    관리 화면은 언제나 overrides.json 만 쓴다 — 새 버전 zip을 덮어써도 올린 작품·고친 글이 남는 이유 */
 let BASE=null, OV={apps:{}};
-const OVK=['works','summary','notice','story','pin','allowRun','allowDownload','private'];
+const OVK=['works','summary','notice','story','pin','allowRun','allowDownload','private','screens','thumb'];
 async function readAppsJson(){
   const [b,o]=await Promise.all([api('file',{path:'data/apps.json'}),api('file',{path:'data/overrides.json'})]);
   BASE=JSON.parse(b.text); try{ OV=o.missing||!o.text?{apps:{}}:JSON.parse(o.text); }catch(e){ OV={apps:{}}; } if(!OV.apps||typeof OV.apps!=='object') OV.apps={};
@@ -42,7 +42,7 @@ const OVFILE=()=>({path:'data/overrides.json',text:ovText()});
 async function commitFiles(message, files /* [{path, base64|text}] */, deletions /* [path] */, onProgress){
   const out=[]; let done=0; const imgs=files.filter(f=>f.base64);
   for(const f of files){
-    if(f.base64){ const b=await api('blob',{base64:f.base64}); out.push({path:f.path,sha:b.sha}); done++; onProgress&&onProgress(done,imgs.length,f.path); }
+    if(f.base64){ const b=await api('blob',{base64:f.base64,path:f.path}); out.push({path:f.path,sha:b.sha}); done++; onProgress&&onProgress(done,imgs.length,f.path); }
     else out.push({path:f.path,text:f.text});
   }
   const c=await api('commit',{message,files:out,deletions:deletions||[]});
@@ -55,7 +55,7 @@ function loadSession(){ try{ const s=JSON.parse(store.get(SKEY)||'null'); if(s&&
 function showSetup(){
   const box=$('#setup'); const notes=(CFG&&CFG.notes)||[];
   if(!notes.length){ box.hidden=true; return; }
-  box.hidden=false; box.innerHTML=`<p><b>아직 설정이 덜 됐어요.</b></p>${notes.map(n=>`<p>· ${esc(n)}</p>`).join('')}<p>Vercel → 프로젝트 → <b>Settings → Environment Variables</b>에 넣고 <b>Redeploy</b> 하면 됩니다. 자세한 순서는 저장소의 README「관리 화면」에 있어요.</p>`;
+  box.hidden=false; box.innerHTML=`<p><b>아직 설정이 덜 됐어요.</b></p>${notes.map(n=>`<p>· ${esc(n)}</p>`).join('')}<p>Vercel → 프로젝트 doguri-studio → <b>Settings → Environment Variables</b>에 넣고 <b>Redeploy</b> 하면 됩니다. 필요한 것: <b>SUPABASE_SERVICE_KEY</b>(Supabase → Project Settings → API → service_role), <b>ADMIN_PASSWORD</b>.</p>`;
 }
 function mountGoogle(clientId){
   const box=$('#lmGoogle'); box.hidden=false;
@@ -106,7 +106,7 @@ async function enter(){
   }catch(e){ st($('#stLogin'),'들어가지 못했습니다: '+e.message,'err'); if(!SESSION) return; }
 }
 async function boot(){
-  try{ CFG=await api('config'); }catch(e){ st($('#stLogin'),'관리 서버(/api/admin)에 닿지 못했습니다: '+e.message+' — Vercel에 api/ 폴더까지 올라갔는지 확인해 주세요.','err'); return; }
+  try{ CFG=await api('config'); }catch(e){ st($('#stLogin'),'관리 서버(/api/admin)에 닿지 못했습니다: '+e.message+' — 배포에 api/ 폴더가 들어갔는지 확인해 주세요.','err'); return; }
   showSetup();
   const canGoogle=!!CFG.google, canPw=!!CFG.password;
   $('#loginMethods').hidden=!(canGoogle||canPw); $('#lmPass').hidden=!canPw; $('#lmOr').hidden=!(canGoogle&&canPw);
@@ -252,13 +252,13 @@ $('#btnPublish').addEventListener('click',async()=>{
     await readAppsJson(); // 최신 상태 위에 얹기
     const cur=app(); cur.works=cur.works||[]; cur.works.unshift({slug,title,date,ratio,blurb,cards:paths}); // 최신 작품이 맨 앞 — 상세에는 앞의 넷만 보인다
     files.push(OVFILE());
-    log('저장소에 올리는 중…');
+    log('저장하는 중…');
     const sha=await commitFiles(`작품 추가: ${title} (${a.name})`,files,[],(d,n,p)=>{ fill.style.width=(32+60*d/n)+'%'; log(`  올림 ${d}/${n}`); });
-    log(`커밋 완료 ${sha.slice(0,7)} · Vercel이 배포하는 중 (보통 30초~1분)`); fill.style.width='94%';
+    log(`저장 완료 ${sha} · 사이트에 반영되는지 확인하는 중 (보통 몇 초)`); fill.style.width='94%';
     // 사이트에 반영됐는지 확인
-    let seen=false; for(let k=0;k<24&&!seen;k++){ await new Promise(r=>setTimeout(r,8000)); try{ const j=await (await fetch('/data/overrides.json?_='+Date.now(),{cache:'no-store'})).json(); seen=!!((j.apps||{})[a.slug]?.works||[]).find(w=>w.slug===slug); }catch(e){} log(seen?'사이트에 반영됐습니다.':`  아직 배포 중… (${(k+1)*8}초)`); }
+    let seen=false; for(let k=0;k<10&&!seen;k++){ await new Promise(r=>setTimeout(r,3000)); try{ const j=await (await fetch('/data/overrides.json?_='+Date.now(),{cache:'no-store'})).json(); seen=!!((j.apps||{})[a.slug]?.works||[]).find(w=>w.slug===slug); }catch(e){} log(seen?'사이트에 반영됐습니다.':`  아직 반영 중… (${(k+1)*3}초)`); }
     fill.style.width='100%';
-    $('#done').hidden=false; $('#done').innerHTML=seen?`게시 완료! <a href="/project/${esc(a.slug)}" target="_blank" rel="noopener">${esc(a.name)} 상세에서 보기 →</a>`:`저장소에는 올라갔습니다. 배포가 조금 더 걸리는 것 같아요 — 1~2분 뒤 <a href="/project/${esc(a.slug)}" target="_blank" rel="noopener">${esc(a.name)} 상세</a>를 열어 확인해 주세요.`;
+    $('#done').hidden=false; $('#done').innerHTML=seen?`게시 완료! <a href="/project/${esc(a.slug)}" target="_blank" rel="noopener">${esc(a.name)} 상세에서 보기 →</a>`:`저장은 됐습니다. 반영이 조금 더 걸리는 것 같아요 — 잠시 뒤 <a href="/project/${esc(a.slug)}" target="_blank" rel="noopener">${esc(a.name)} 상세</a>를 열어 확인해 주세요.`;
     NEW.forEach(c=>URL.revokeObjectURL(c.url)); NEW=[]; renderCards(); $('#wTitle').value=''; $('#wBlurb').value=''; $('#wSlug').value=''; DIRTY=false; renderWorks();
   }catch(e){ log('실패: '+e.message); st($('#stNew'),'게시 실패: '+e.message,'err'); btn.disabled=false; }
   $('#btnClear').disabled=false;
@@ -268,7 +268,7 @@ $('#btnPublish').addEventListener('click',async()=>{
 let TSEL='', TORIG=null, TLOADING=false, TNOTE='';
 const tApp=()=>APPSJSON.apps.find(a=>a.slug===TSEL);
 const storyPath=a=>(a.story?a.story.replace(/^\//,''):`content/${a.slug}.md`);
-function buildTextSel(){ const s=$('#tAppSel'); s.innerHTML=APPSJSON.apps.map(a=>`<option value="${esc(a.slug)}">${esc(a.name)}${a.status==='soon'?' (쓰는 중)':''}</option>`).join(''); if(![...s.options].some(o=>o.value===TSEL)) TSEL=SEL||s.options[0]?.value||''; s.value=TSEL; }
+function buildTextSel(){ const s=$('#tAppSel'); s.innerHTML=APPSJSON.apps.map(a=>`<option value="${esc(a.slug)}">${esc(a.name)}${a.status==='soon'?' (쓰는 중)':''}</option>`).join(''); if(![...s.options].some(o=>o.value===TSEL)) TSEL=SEL||s.options[0]?.value||''; s.value=TSEL; const ts=$('#tShots'); if(ts) ts.href='/shots?app='+encodeURIComponent(TSEL); }
 const tFlags=()=>({allowRun:$('#tAllowRun').checked,allowDownload:$('#tAllowDl').checked,private:$('#tPrivate').checked});
 function textDirty(){ if(!TORIG) return false; const f=tFlags(); return $('#tSummary').value!==TORIG.summary||$('#tNotice').value!==TORIG.notice||$('#tStory').value!==TORIG.story||f.allowRun!==TORIG.allowRun||f.allowDownload!==TORIG.allowDownload||f.private!==TORIG.private; }
 function textState(){ const d=textDirty(); $('#btnSaveText').disabled=!d||TLOADING; if(!TLOADING) st($('#stText'),d?'고친 내용이 있어요. 저장하고 게시를 누르면 반영됩니다.':TNOTE); }
@@ -280,7 +280,7 @@ async function loadText(){
   catch(e){ TORIG={summary:a.summary||'',notice:a.notice||'',story:'',...tFlags()}; TNOTE='이야기 글을 불러오지 못했습니다: '+e.message; }
   TLOADING=false; textState();
 }
-$('#tAppSel').addEventListener('change',e=>{ if(textDirty()&&!confirm('저장하지 않은 글이 있어요. 버리고 넘어갈까요?')){ e.target.value=TSEL; return; } TSEL=e.target.value; loadText(); });
+$('#tAppSel').addEventListener('change',e=>{ if(textDirty()&&!confirm('저장하지 않은 글이 있어요. 버리고 넘어갈까요?')){ e.target.value=TSEL; return; } TSEL=e.target.value; const ts=$('#tShots'); if(ts) ts.href='/shots?app='+encodeURIComponent(TSEL); loadText(); });
 ['#tSummary','#tNotice','#tStory'].forEach(id=>$(id).addEventListener('input',textState)); ['#tAllowRun','#tAllowDl','#tPrivate'].forEach(id=>$(id).addEventListener('change',textState));
 $('#btnReloadText').addEventListener('click',()=>{ if(textDirty()&&!confirm('고친 내용을 버리고 저장된 글로 되돌릴까요?')) return; loadText(); });
 $('#btnSaveText').addEventListener('click',async()=>{

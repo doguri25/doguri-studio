@@ -93,6 +93,8 @@ addEventListener('scroll',()=>{ whisperBoxT=0; if(scrollQ) return; scrollQ=true;
 function artHTML(kind){ return `<div class="art ${kind||'soon-art'}">${kind==='cards'?'<i></i><i></i><i></i>':kind==='sun'?'<i></i><i></i>':'<i></i>'}</div>`; }
 /* 스크린샷이 있으면 사진, 없으면 벡터 그림 */
 function visHTML(app,src){ const s=src||app.thumb; return `<div class="vis">${artHTML(app.art)}${s?`<img src="${esc(s)}" alt="${esc(app.name)} 화면" loading="lazy">`:''}</div>`; }
+/* 카드↔상세 전환용 유령: 벡터 그림 없이 사진만(즉시 디코딩) — 전환이 빨라 그림이 깜빡여 보이던 것을 없앤다 */
+function ghostHTML(app){ const s=app.thumb; return `<div class="vis" style="background:#14121a">${s?`<img src="${esc(s)}" alt="" decoding="sync" fetchpriority="high">`:''}</div>`; }
 
 /* ═══════════════ 서가 렌더 ═══════════════ */
 const grid=$('#grid'), chipsEl=$('#chips'); let tag='all';
@@ -115,11 +117,19 @@ function renderChips(){
   chipsEl.innerHTML=[`<button type="button" class="chip on" data-tag="all" aria-pressed="true">전체<span class="n">${APPS.length}</span></button>`,...all.map(t=>`<button type="button" class="chip" data-tag="${esc(t)}" aria-pressed="false">${esc(t)}<span class="n">${cnt(t)}</span></button>`)].join('');
   $$('.chip',chipsEl).forEach(c=>c.addEventListener('click',()=>setFilter(c.dataset.tag)));
 }
-function updateCount(){ const vis=$$('.file',grid).filter(c=>!c.hidden); const soon=vis.filter(c=>c.classList.contains('soon')).length; const priv=vis.filter(c=>c.dataset.private==='1'&&!c.classList.contains('soon')).length; const live=vis.length-soon-priv; $('#count').innerHTML=`서가의 봉인 <b>${vis.length}</b>통 · 열 수 있는 이야기 <b>${live}</b>편${priv?` · 비공개 <b>${priv}</b>편`:''} · 쓰는 중 <b>${soon}</b>편`; }
-function setFilter(t,silent){
+function updateCount(){ const vis=$$('.file',grid).filter(c=>!c.hidden||c.classList.contains('paged')); const soon=vis.filter(c=>c.classList.contains('soon')).length; const priv=vis.filter(c=>c.dataset.private==='1'&&!c.classList.contains('soon')).length; const live=vis.length-soon-priv; $('#count').innerHTML=`서가의 봉인 <b>${vis.length}</b>통 · 열 수 있는 이야기 <b>${live}</b>편${priv?` · 비공개 <b>${priv}</b>편`:''} · 쓰는 중 <b>${soon}</b>편`; }
+/* 서가 쪽수: PC 12통·폰 5통씩 보이고, 「더 보기」를 누르면 다음 묶음이 나온다 (카드가 늘어도 첫 화면이 무거워지지 않게) */
+const PAGE=()=>matchMedia('(max-width:760px)').matches?5:12; let shown=PAGE();
+function applyPage(t){
+  let n=0; $$('.file',grid).forEach(c=>{ const m=(t==='all'||c.dataset.tags.split('|').includes(t)); const on=m&&n<shown; if(m) n++; c.hidden=!on; c.classList.toggle('paged',m&&!on); });
+  let more=$('#more'); if(!more){ more=document.createElement('div'); more.id='more'; more.className='more-wrap'; more.innerHTML='<button type="button" class="btn line">더 보기</button>'; $('#boardWrap').after(more);
+    $('button',more).addEventListener('click',()=>{ shown+=PAGE(); applyPage(tag); updateCount(); drawThread(false); }); }
+  const left=n-Math.min(n,shown); more.hidden=left<=0; if(left>0) $('button',more).textContent=`봉인 ${left}통 더 보기`;
+}
+function setFilter(t,silent){ shown=PAGE();
   if(!$$('.chip',chipsEl).some(c=>c.dataset.tag===t)) t='all';
   tag=t; $$('.chip',chipsEl).forEach(c=>{ const on=c.dataset.tag===t; c.classList.toggle('on',on); c.setAttribute('aria-pressed',on); });
-  const apply=()=>{ $$('.file',grid).forEach(c=>{ c.hidden=!(t==='all'||c.dataset.tags.split('|').includes(t)); }); updateCount(); drawThread(false); };
+  const apply=()=>{ applyPage(t); updateCount(); drawThread(false); };
   if(document.startViewTransition&&!reduced&&!silent){ document.startViewTransition(apply); } else apply();
   if(!silent&&!current&&about.hidden) history.replaceState(history.state,'',t==='all'?'/':'/#tag='+encodeURIComponent(t));
 }
@@ -239,9 +249,9 @@ function cardOf(slug){ return $(`.file[data-slug="${CSS.escape(slug)}"]`,grid); 
 function openCase(slug,card,push=true){
   const app=APPS.find(a=>a.slug===slug&&a.status!=='soon'); if(!app||current)return; current=app; currentCard=card||cardOf(slug); fillDossier(app);
   dossier.hidden=false; dossier.scrollTop=0; document.body.classList.add('lock'); requestAnimationFrame(()=>dossier.classList.add('on'));
-  if(push){ history.pushState({view:'project',slug},'','/project/'+encodeURIComponent(slug)); pushed=true; } else pushed=false;
+  if(push){ document.title=SITE_NAME; history.pushState({view:'project',slug},'','/project/'+encodeURIComponent(slug)); pushed=true; } else pushed=false; document.title=app.name+' · '+SITE_NAME;
   const to=$('#dPhoto').getBoundingClientRect(); card=currentCard;
-  if(card&&!reduced&&!card.hidden&&card.getBoundingClientRect().height>0){ const from=$('.photo',card).getBoundingClientRect(); const g=document.createElement('div'); g.className='ghost'; g.innerHTML=visHTML(app);
+  if(card&&!reduced&&!card.hidden&&card.getBoundingClientRect().height>0){ const from=$('.photo',card).getBoundingClientRect(); const g=document.createElement('div'); g.className='ghost'; g.innerHTML=ghostHTML(app);
     g.style.cssText=`left:${from.left}px;top:${from.top}px;width:${from.width}px;height:${from.height}px`; document.body.appendChild(g);
     const anim=g.animate([{transform:'translate(0,0) scale(1,1)'},{transform:`translate(${to.left-from.left}px,${to.top-from.top}px) scale(${to.width/from.width},${to.height/from.height})`}],{duration:560,easing:'cubic-bezier(.2,.8,.2,1)',fill:'forwards'});
     anim.onfinish=()=>{ dossier.classList.add('ready'); g.remove(); };
@@ -252,7 +262,7 @@ function closeCase(viaHistory=false){
   if(!current)return; if(!viewer.hidden) closeViewer(); const app=current, card=currentCard; current=null; setPage();
   if(!viaHistory){ if(pushed) history.back(); else history.replaceState(null,'','/'); }
   pushed=false;
-  if(card&&!reduced&&!card.hidden){ const from=$('#dPhoto').getBoundingClientRect(); const to=$('.photo',card).getBoundingClientRect(); const g=document.createElement('div'); g.className='ghost'; g.innerHTML=visHTML(app);
+  if(card&&!reduced&&!card.hidden){ const from=$('#dPhoto').getBoundingClientRect(); const to=$('.photo',card).getBoundingClientRect(); const g=document.createElement('div'); g.className='ghost'; g.innerHTML=ghostHTML(app);
     g.style.cssText=`left:${from.left}px;top:${from.top}px;width:${from.width}px;height:${from.height}px`; document.body.appendChild(g); dossier.classList.remove('ready');
     g.animate([{transform:'translate(0,0) scale(1,1)'},{transform:`translate(${to.left-from.left}px,${to.top-from.top}px) scale(${to.width/from.width},${to.height/from.height})`,opacity:.6}],{duration:460,easing:'cubic-bezier(.2,.8,.2,1)',fill:'forwards'}).onfinish=()=>g.remove(); }
   dossier.classList.remove('on'); setTimeout(()=>{ dossier.hidden=true; dossier.classList.remove('ready'); if(gallery.hidden&&viewer.hidden) document.body.classList.remove('lock'); if(card) focusAfter($('.case-link',card)||card); },420);
@@ -423,7 +433,9 @@ function parseLocation(){ const q=new URLSearchParams(location.search); let w=lo
   if(m) return {view:'project',slug:decodeURIComponent(m[1])}; if(q.get('id')) return {view:'project',slug:q.get('id')};
   if(/^\/about\/?$/.test(location.pathname)) return {view:'about'}; return {view:'home'}; }
 function parseTag(){ const h=location.hash.match(/^#tag=(.+)$/); if(h) return decodeURIComponent(h[1]); const q=new URLSearchParams(location.search); return q.get('tag')||'all'; }
-addEventListener('popstate',()=>{ if(!viewer.hidden) closeViewer(); const l=parseLocation();
+/* 크롬은 뒤로 가기 뒤 그 기록 항목에 남아 있던 제목을 탭에 보여 준다 — 이동이 끝난 다음 제목을 다시 맞춘다 */
+function syncTitle(){ const l=parseLocation(); const a=l.slug&&APPS.find(x=>x.slug===l.slug); document.title=l.view==='works'&&a?a.name+' 작품집 · '+SITE_NAME:l.view==='project'&&a?a.name+' · '+SITE_NAME:l.view==='about'?'소개 · '+SITE_NAME:SITE_NAME; }
+addEventListener('popstate',()=>{ if(!viewer.hidden) closeViewer(); const l=parseLocation(); setTimeout(syncTitle,0);
   if(l.view==='works'){ if(!about.hidden) closeAbout(true); if(gallery.hidden||!galleryApp||galleryApp.slug!==l.slug) openGallery(l.slug,false); return; }
   if(!gallery.hidden) closeGallery(true);
   if(l.view==='project'){ if(current&&current.slug===l.slug)return; if(current){ current=null; dossier.classList.remove('ready'); fillDossierSwap(l.slug); return; } if(!about.hidden) closeAbout(true); openCase(l.slug,cardOf(l.slug),false); }
@@ -510,7 +522,7 @@ async function boot(){
     const [r,ro]=await Promise.all([fetch(pre('apps.json')),fetch(pre('overrides.json')).catch(()=>null)]); if(!r.ok) throw new Error(r.status);
     const data=await r.json(); let ov={}; try{ if(ro&&ro.ok){ const oj=await ro.json(); ov=(oj&&oj.apps)||{}; } }catch(e){}
     /* data/overrides.json(관리 화면이 쓰는 파일)이 apps.json(코드와 함께 배포되는 기본값) 위에 덮인다 — 새 버전을 올려도 올린 작품·고친 글이 남는 이유 */
-    const OVK=['works','summary','notice','story','pin','allowRun','allowDownload','private'];
+    const OVK=['works','summary','notice','story','pin','allowRun','allowDownload','private','screens','thumb'];
     SITE=data.site||{}; APPS=shelfOrder((data.apps||[]).map(a=>{ const o=ov[a.slug]; if(!o||typeof o!=='object') return a; const m={...a}; for(const k of OVK) if(k in o) m[k]=o[k]; return m; }));
   }catch(e){
     grid.removeAttribute('aria-busy'); grid.innerHTML='<div class="loading err">앱 목록(data/apps.json)을 읽지 못했습니다.<br>파일을 직접 열면(file://) 읽을 수 없어요 — 저장소 폴더에서 <code>npx serve -s .</code> 로 띄운 뒤 열어 주세요.</div>';

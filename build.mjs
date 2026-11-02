@@ -23,6 +23,9 @@ const OUT = join(CWD, 'public');
 /* 사이트 파일(index.html·assets/)이 빌드 폴더에 함께 있으면 저장소째 받은 것 → 그 파일을 기준으로 쓴다 */
 const LOCAL = !ENV.BASE_TARBALL_URL && existsSync(join(CWD, 'index.html')) && existsSync(join(CWD, 'assets'));
 const PRUNE = new Set(['.git', 'node_modules', 'public', '.vercel']);           // 저장소를 훑을 때 들어가지 않을 폴더
+/* site_patches 1~57번은 2026-11-02에 저장소 코드에 합쳤다(apps.json 카드·그림 CSS·사이트맵·쪽수·관리 화면 문구 등).
+   표에서 다시 켜져 있어도 두 번 들어가지 않게 건너뛴다. 새로 넣는 패치(58번~)는 그대로 적용된다 */
+const FOLDED_THROUGH = 57;
 const LIVE = [/^data\/overrides\.json$/, /^content\/[a-z0-9-]+\.md$/];          // api/content.js 가 서빙 → 정적 파일에서 제외
 const SKIP = [/^\.github\//, /^tools\//, /^README\.md$/, /^\.gitignore$/, /^api\//, /^vercel\.json$/, /^package(-lock)?\.json$/, /^build\.mjs$/, /^\.vercel/]; // 배포 설정·문서는 공개 파일로 내보내지 않는다
 const TEXT_EXT = /\.(html|css|js|mjs|json|md|xml|txt|svg|webmanifest)$/i;
@@ -75,6 +78,9 @@ async function main() {
   /* 2b) 작은 수정(site_patches): 파일을 통째로 다시 올리지 않고 문자열 치환. find 가 정확히 한 번 있어야 한다(all_matches면 전부) */
   try {
     patches = await sb(`/rest/v1/site_patches?select=id,path,find,replace,all_matches&enabled=is.true&order=id.asc`);
+    const folded = patches.filter(p => p.id <= FOLDED_THROUGH).length;
+    if (folded) log(`patches: ${folded}개는 저장소에 이미 합쳐져 있어 건너뜀 (#1~#${FOLDED_THROUGH})`);
+    patches = patches.filter(p => p.id > FOLDED_THROUGH);
     for (const p of patches) {
       const f = join(OUT, p.path);
       if (!/^[A-Za-z0-9_][A-Za-z0-9_./-]*$/.test(p.path) || p.path.includes('..') || !existsSync(f)) { bad.push({ id: p.id, why: 'no file' }); log(`patch #${p.id} skip: 파일 없음 ${p.path}`); continue; }

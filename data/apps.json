@@ -327,8 +327,595 @@
       "allowDownload": true
     },
     {
-      "slug": "next",
+      "slug": "yeonsu-survey",
       "num": "06",
+      "pin": null,
+      "added": "2026-09-10T20:00:00+09:00",
+      "name": "연수 수요조사",
+      "summary": "교내 연수 참여 의사와 되는 요일·안 되는 날을 1분 만에 받고, 관리자는 실시간 집계와 추천 날짜를 봅니다.",
+      "tags": [
+        "교실",
+        "설문"
+      ],
+      "status": "live",
+      "period": "2026.09",
+      "art": "survey",
+      "thumb": "/media/yeonsu-survey/thumb.webp",
+      "screens": [
+        "/media/yeonsu-survey/01.webp",
+        "/media/yeonsu-survey/02.webp",
+        "/media/yeonsu-survey/03.webp",
+        "/media/yeonsu-survey/04.webp"
+      ],
+      "video": null,
+      "run": null,
+      "altRun": null,
+      "downloads": [],
+      "notice": "선생님들 이름과 일정이 들어가는 조사라 사이트는 공개하지 않습니다. 화면(지어낸 이름과 숫자)과 만든 이야기만 남겨 둡니다.",
+      "facts": [
+        [
+          "응답 항목",
+          "이름 · 참여 여부 · 되는 요일 · 안 되는 날 · 한마디"
+        ],
+        [
+          "관리",
+          "실시간 집계 · 추천 날짜 · 명렬표 대조 · CSV"
+        ],
+        [
+          "저장",
+          "Supabase + 조사마다 새 구글 시트"
+        ],
+        [
+          "화면",
+          "PC 와이드 한 화면 · 폰 한 줄"
+        ]
+      ],
+      "story": "/content/yeonsu-survey.md",
+      "private": true,
+      "allowRun": true,
+      "allowDownload": true
+    },
+    {
+      "slug": "town-adventure",
+      "num": "07",
+      "pin": null,
+      "added": "2026-09-11T14:00:00+09:00",
+      "name": "우리 고장 모험 수첩",
+      "summary": "실제 지도 위를 걸으며 우리 고장 223곳을 발견하고, 길잡이의 이야기와 퀴즈로 금화를 모아 수첩을 채우는 3학년 사회 탐방 게임입니다.",
+      "tags": ["교실", "게임"],
+      "status": "live",
+      "period": "2026.09",
+      "art": "adventure",
+      "thumb": "/media/town-adventure/thumb.webp",
+      "screens": [],
+      "video": null,
+      "run": null,
+      "altRun": null,
+      "downloads": [],
+      "notice": "실제 지역 이름·학교·가게 상호가 들어가는 게임이라 사이트는 공개하지 않습니다. 화면은 이름을 ○○으로 가리고 실제 사진은 삽화로 바꿔 다시 찍은 것입니다.",
+      "facts": [
+        ["장소", "군 전체 3읍 8면 223곳 · 길잡이 58명"],
+        ["이동", "걷기 · 자전거 · 자동차 · 슈퍼카 · 비행기"],
+        ["배움", "도착 이야기 3장 + 발견 퀴즈 · 금화 · 발견 수첩"],
+        ["지도", "OpenStreetMap 실제 지형 · 전체 지도 · 미니맵"]
+      ],
+      "story": "/content/town-adventure.md",
+      "private": true,
+      "allowRun": false,
+      "allowDownload": false
+    },
+    {
+      "slug": "last-take",
+      "num": "08",
+      "pin": null,
+      "added": "2026-09-12T00:30:00+09:00",
+      "name": "라스트 테이크",
+      "summary": "시나리오를 고르고 감독·배우를 섭외해 극장이나 OTT로 영화를 내보내는 브라우저 영화 제작사 경영 게임. 시작 자본 150억, 영화인 1,600명.",
+      "tags": ["게임", "경영"],
+      "status": "live",
+      "period": "2026.09",
+      "art": "film",
+      "thumb": "/media/last-take/thumb.webp",
+      "screens": [],
+      "video": null,
+      "run": { "type": "external", "url": "https://doguri25.github.io/last-take/" },
+      "altRun": null,
+      "downloads": [],
+      "notice": null,
+      "facts": [
+        ["규모", "시작 자본 150억 · 제작사 10곳 · 영화인 1,600명 · 동시 제작 3편"],
+        ["제작", "시나리오 6편 제안 · 원작 40편 · 장르 21개 · 24~48주 촬영"],
+        ["개봉", "극장 또는 OTT 5곳 독점 · 평론가 7명 · 관객 16명 평점"],
+        ["진행", "1주 단위 · 브라우저 자동 저장 · PC·폰 대응 · v1.4.2"]
+      ],
+      "story": "/content/last-take.md",
+      "private": null,
+      "allowRun": true,
+      "allowDownload": false
+    },
+    {
+      "slug": "sa-an",
+      "num": "09",
+      "pin": null,
+      "added": "2026-09-12T15:00:00+09:00",
+      "name": "사안 접수",
+      "summary": "학교폭력 담당교사의 하루를 그대로 옮긴 시뮬레이션. 신고 접수부터 48시간 보고·통보·분리·면담·전담기구·심의위·종결까지, 슬롯을 쓰며 하루씩 넘깁니다.",
+      "tags": ["게임", "연수"],
+      "status": "live",
+      "period": "2026.09",
+      "art": "casefile",
+      "thumb": "/media/sa-an/thumb.webp",
+      "screens": [],
+      "video": null,
+      "run": null,
+      "altRun": null,
+      "downloads": [],
+      "notice": "실행 링크는 두지 않았습니다. 화면과 만든 이야기로만 소개합니다.",
+      "facts": [
+        ["원형", "사안 원형 17종 · 회차마다 인물·증거·거짓말이 바뀜 · 동시 진행 2~3건"],
+        ["절차", "48시간 보고 · 통보 · 분리 · 확인서 · 면담 · 전담기구 · 심의위 · 종결 추적"],
+        ["압박", "보호자 요구 덱 · 민원·변호사·경찰·언론·감사 이벤트 · 관리자 지시"],
+        ["연수", "강사 코드(QR) · 결과 코드 점수표 · 토론 카드 · 난이도 5단계 · v3.1.0"]
+      ],
+      "story": "/content/sa-an.md",
+      "private": true,
+      "allowRun": false,
+      "allowDownload": false
+    },
+    {
+      "slug": "pc-lab",
+      "num": "10",
+      "pin": null,
+      "added": "2026-09-14T14:00:00+09:00",
+      "name": "PC LAB",
+      "summary": "전원 코드를 뽑고 나사를 풀어 케이스를 여는 컴퓨터 조립·수리 시뮬레이터. 기기 5종을 3D로 돌려 보며 조립하고, 아홉 건의 고장 의뢰를 증거로 진단합니다.",
+      "tags": ["게임", "학습"],
+      "status": "live",
+      "period": "2026.09",
+      "art": "rig",
+      "thumb": "/media/pc-lab/thumb.webp",
+      "screens": [],
+      "video": null,
+      "run": { "type": "external", "url": "https://doguri25.github.io/pc-lab/" },
+      "altRun": null,
+      "downloads": [],
+      "notice": null,
+      "facts": [
+        ["조립", "기기 5종 · 3D 360° 회전 · 다섯 시점 카메라 · 나사·커넥터 확대 작업"],
+        ["진단", "고장 의뢰 9건 · 반복 의뢰 생성 · 관찰 기록과 부하 검사로 원인 찾기"],
+        ["사전", "실제 제품명 참조 데이터 422개 항목 · 제조사 공식 문서 출처"],
+        ["학습", "기초 과정 6단원 24설명 48문제 · 활용 분석 27개 카테고리 172작업 · v2.3.1"]
+      ],
+      "story": "/content/pc-lab.md",
+      "private": null,
+      "allowRun": true,
+      "allowDownload": false
+    },
+    {
+      "slug": "cosmetic-lab",
+      "num": "11",
+      "pin": null,
+      "added": "2026-09-28T20:00:00+09:00",
+      "name": "내 화장품 연구소",
+      "summary": "성분을 골라 비커에 담고 100%를 맞춰 보는 화장품 배합 연구소. 17가지 제품 유형, 성분 538종 사전, 산 화장품의 전성분을 사진이나 텍스트로 읽어 주는 분석까지.",
+      "tags": ["도구", "뷰티"],
+      "status": "live",
+      "period": "2026.09",
+      "art": "beaker",
+      "thumb": "/media/cosmetic-lab/thumb.webp",
+      "screens": [],
+      "video": null,
+      "run": { "type": "external", "url": "https://doguri25.github.io/cosmetic-lab/" },
+      "altRun": null,
+      "downloads": [],
+      "notice": null,
+      "facts": [
+        ["배합", "제품 유형 17종 · 수상·유상·활성·세정 층 비커 · 합계 100% 잠금 · 추천 비율·권장 범위"],
+        ["리포트", "예상 효능 · 주의할 점 · 성분 궁합 · 피부 타입 반영 · DIY 레시피 g 환산 · 완성 카드"],
+        ["사전", "성분 538종 · 자체 3단계 등급(안심·주의·경고) · 알레르기 유발성분 25종 · 초보자용 설명"],
+        ["분석", "전성분 텍스트·사진 읽기 · 화장대 궁합 · 개인 API 키로 AI 해설(제미나이·GPT·클로드) · v1.9"]
+      ],
+      "story": "/content/cosmetic-lab.md",
+      "private": null,
+      "allowRun": true,
+      "allowDownload": false
+    },
+    {
+      "slug": "bakkumi",
+      "num": "12",
+      "pin": null,
+      "added": "2026-10-27T20:00:00+09:00",
+      "name": "바꾸미",
+      "summary": "파일을 끌어다 놓으면 바로 아래에 바꿀 형식이 뜨는 Mac·Windows 변환 앱. 사진·PDF·한글·오피스·음악·영상·압축까지, 인터넷 없이 원본 옆에 새 파일로.",
+      "tags": [
+        "도구",
+        "데스크톱"
+      ],
+      "status": "live",
+      "period": "2026.10",
+      "art": "swap",
+      "thumb": "/media/bakkumi/thumb.webp",
+      "screens": [],
+      "video": null,
+      "run": {
+        "type": "external",
+        "url": "https://github.com/doguri25/bakkumi-releases/releases/latest"
+      },
+      "altRun": null,
+      "downloads": [
+        {
+          "label": "Mac·Windows 설치 파일 (GitHub 릴리스)",
+          "file": "https://github.com/doguri25/bakkumi-releases/releases/latest"
+        }
+      ],
+      "notice": "설치해서 쓰는 앱이라 실행 버튼은 GitHub 릴리스(설치 파일) 페이지를 엽니다. 유료 서명이 없어 처음 열 때 경고가 나오면 「그래도 열기」(Mac) 또는 「추가 정보 → 실행」(Windows)을 눌러 주세요.",
+      "facts": [
+        [
+          "쓰는 법",
+          "끌어다 놓기·⌘V 붙여넣기 → 아래에 뜬 형식 단추 한 번 · 결과는 원본 옆 새 파일"
+        ],
+        [
+          "바꾸는 것",
+          "사진·SVG·PDF·한글·오피스·글·음악·영상·압축 · PDF → Word·한글 · 문서 → 마크다운"
+        ],
+        [
+          "엔진",
+          "FFmpeg·rhwp·pdf.js·office2pdf·resvg 등 내장 · 인터넷 없이 이 컴퓨터 안에서 변환"
+        ],
+        [
+          "설치",
+          "Mac(애플 실리콘)·Windows · Tauri 2 · 자동 업데이트 · v0.6.0"
+        ]
+      ],
+      "story": "/content/bakkumi.md",
+      "private": null,
+      "allowRun": true,
+      "allowDownload": true
+    },
+    {
+      "slug": "neoview",
+      "num": "13",
+      "pin": null,
+      "added": "2026-10-27T20:10:00+09:00",
+      "name": "네오뷰",
+      "summary": "MacBook Neo에서 쓰려고 만든 macOS 사진 뷰어. 폴더를 훑으며 보고, 확대해도 깨끗하게, 남에게 보이기 싫은 사진은 암호화 보관함으로.",
+      "tags": [
+        "도구",
+        "데스크톱"
+      ],
+      "status": "live",
+      "period": "2026.10",
+      "art": "loupe",
+      "thumb": "/media/neoview/thumb.webp",
+      "screens": [],
+      "video": null,
+      "run": {
+        "type": "external",
+        "url": "https://github.com/doguri25/neoview/releases/latest"
+      },
+      "altRun": null,
+      "downloads": [
+        {
+          "label": "Mac 설치 파일 NeoView-Installer.pkg (GitHub 릴리스)",
+          "file": "https://github.com/doguri25/neoview/releases/latest"
+        }
+      ],
+      "notice": "설치해서 쓰는 Mac 앱(macOS 14 이상, 애플 실리콘)이라 실행 버튼은 GitHub 릴리스 페이지를 엽니다. 유료 개발자 서명이 없어 첫 실행 때 「그래도 열기」가 필요할 수 있어요.",
+      "facts": [
+        [
+          "보기",
+          "폴더 트리 + 크기 조절 썸네일 · 창 전체 뷰어 · 더블클릭 100% · ⌘스크롤 확대 · 단축키"
+        ],
+        [
+          "화질",
+          "100% 원본 픽셀 정렬 · 확대 선명화·후광 억제 · 축소 물결무늬 감소 · 보이는 영역부터 타일 처리"
+        ],
+        [
+          "정리",
+          "검색·필터 · 자르기·일괄 변환 · 휴지통·이동 · 사진 보관함 · 암호화 보관함·Touch ID"
+        ],
+        [
+          "설치",
+          "macOS 14+ 애플 실리콘 · SwiftUI·AppKit·ImageIO · PKG 설치 · 자동 업데이트 · v0.6.0"
+        ]
+      ],
+      "story": "/content/neoview.md",
+      "private": null,
+      "allowRun": true,
+      "allowDownload": true
+    },
+    {
+      "slug": "coding-hanip",
+      "num": "14",
+      "pin": null,
+      "added": "2026-10-27T20:20:00+09:00",
+      "name": "코딩한입",
+      "summary": "코딩을 처음 배우는 어른을 위한 한입 크기 공부앱. 9과정 52단원, 하루 10분 레슨과 퀴즈, 브라우저에서 바로 돌려 보는 JavaScript·파이썬 연습장.",
+      "tags": [
+        "학습",
+        "코딩"
+      ],
+      "status": "live",
+      "period": "2026.09",
+      "art": "bite",
+      "thumb": "/media/coding-hanip/thumb.webp",
+      "screens": [],
+      "video": null,
+      "run": {
+        "type": "external",
+        "url": "https://coding-hanip.vercel.app"
+      },
+      "altRun": null,
+      "downloads": [],
+      "notice": null,
+      "facts": [
+        [
+          "과정",
+          "9과정 52단원 416레슨 · 코딩 첫걸음·마크다운·AI에게 일 시키기·HTML·CSS·JavaScript·파이썬·바이브코딩·중급"
+        ],
+        [
+          "단원",
+          "레슨 5 · 헷갈림 퀴즈 2 · 단원 형성평가 10문제 · 레슨마다 예상 시간"
+        ],
+        [
+          "연습장",
+          "JavaScript·파이썬을 브라우저에서 바로 실행 · 직접 만든 초보자용 파이썬 실행기"
+        ],
+        [
+          "기기",
+          "휴대폰 폴더 트리·PC 두 칸 · 설치형 웹앱(인터넷 없이도) · 오답 노트·진도 옮기기 · v1.2.1"
+        ]
+      ],
+      "story": "/content/coding-hanip.md",
+      "private": null,
+      "allowRun": true,
+      "allowDownload": false
+    },
+    {
+      "slug": "pokju",
+      "num": "15",
+      "pin": null,
+      "added": "2026-10-27T20:30:00+09:00",
+      "name": "폭주전설",
+      "summary": "관제 AI가 도로를 빼앗은 도시에서 실제 제원의 차 52대를 몰고 달리는 3D 차량 전투 게임. 미션 38개와 타임어택·레이싱·서바이벌·자유 주행.",
+      "tags": [
+        "게임",
+        "3D"
+      ],
+      "status": "live",
+      "period": "2026.10",
+      "art": "road",
+      "thumb": "/media/pokju/thumb.webp",
+      "screens": [],
+      "video": null,
+      "run": {
+        "type": "external",
+        "url": "https://pokju.vercel.app"
+      },
+      "altRun": null,
+      "downloads": [],
+      "notice": null,
+      "facts": [
+        [
+          "차량",
+          "52종 · 실제 제원(출력·토크·중량)으로 주행 계산 · 차마다 고유·기본 기술"
+        ],
+        [
+          "모드",
+          "미션 38개(6부·엔딩 4) · 타임어택 7트랙 · 레이싱 · 서바이벌 · 자유 주행"
+        ],
+        [
+          "세계",
+          "배경 8곳 · 날씨 5가지 · 낮·노을·밤 · 무기 10·아이템 15·타이어 6"
+        ],
+        [
+          "조작",
+          "키보드·터치 레버·게임패드 · 시점 3가지 · 룸미러 · Three.js 단일 HTML · 정식 1.6"
+        ]
+      ],
+      "story": "/content/pokju.md",
+      "private": null,
+      "allowRun": true,
+      "allowDownload": false
+    },
+    {
+      "slug": "pokju-edu",
+      "num": "16",
+      "pin": null,
+      "added": "2026-10-28T09:00:00+09:00",
+      "name": "폭주 구구단",
+      "summary": "달리는 차로 정답이 적힌 깃발 문을 지나가며 푸는 초등 구구단·맞춤법 게임. 폭주전설의 3D 도로 위에 문제를 얹고, 이야기 18장과 선생님용 수업 링크까지.",
+      "tags": [
+        "게임",
+        "학습"
+      ],
+      "status": "live",
+      "period": "2026.10",
+      "art": "gugu",
+      "thumb": "/media/pokju-edu/thumb.webp",
+      "screens": [],
+      "video": null,
+      "run": {
+        "type": "external",
+        "url": "https://doguri25.github.io/pokju-edu/"
+      },
+      "altRun": null,
+      "downloads": [],
+      "notice": null,
+      "facts": [
+        [
+          "구구단",
+          "깃발 문·정답 풍선 · 순서대로·섞어서·빈칸 찾기·거꾸로 · 생각할 시간 6·4·2.5초 · 틀린 문제는 끝에 한 번 더"
+        ],
+        [
+          "맞춤법",
+          "되/돼·안/않·맞히다/맞추다 등 묶음 10개 · 문장 67개 · 틀리면 까닭 설명"
+        ],
+        [
+          "이야기",
+          "1부 구구단 9장 · 2부 맞춤법 9장 · 원작 전투 · 정답을 맞히면 내구 20% 수리"
+        ],
+        [
+          "수업",
+          "수업 링크 · 9×9 숙달 표 · 결과 크게 보기 · 기록은 기기에만 · 준비 중 0.8"
+        ]
+      ],
+      "story": "/content/pokju-edu.md",
+      "private": null,
+      "allowRun": true,
+      "allowDownload": false
+    },
+    {
+      "slug": "upstage-hanip",
+      "num": "17",
+      "pin": null,
+      "added": "2026-11-02T11:40:00+09:00",
+      "name": "업스테이지한입",
+      "summary": "정보 교사가 업스테이지 Solar·Document Parse·Information Extract로 수업 도구와 에이전트를 만드는 법을 한입씩 배우는 학습앱. 기반연수 2일·15차시 대비, 진짜처럼 눌러 보는 모의 화면.",
+      "tags": [
+        "학습",
+        "AI"
+      ],
+      "status": "live",
+      "period": "2026.10",
+      "art": "solar",
+      "thumb": "/media/upstage-hanip/thumb.webp",
+      "screens": [],
+      "video": null,
+      "run": {
+        "type": "external",
+        "url": "https://upstage-hanip.vercel.app"
+      },
+      "altRun": null,
+      "downloads": [],
+      "notice": "업스테이지의 공식 앱이 아니에요. 제품 이름과 화면은 공부를 돕기 위해서만 썼어요.",
+      "facts": [
+        [
+          "과정",
+          "5과정 16단원 · 단원마다 레슨 5 · 헷갈림 퀴즈 2 · ★ 진짜 실습 미션 · 형성평가"
+        ],
+        [
+          "모의 화면",
+          "업스테이지 콘솔·Playground·Document Parse · Streamlit 학생·교사 화면 · Cursor 에이전트 · API 호출 없이 눌러 보기"
+        ],
+        [
+          "연수",
+          "기반연수 2일·15차시 지도 · 2일차 트랙 A(파이썬 자동채점 + AI 튜터) 중심 · 준비물 체크리스트"
+        ],
+        [
+          "도구",
+          "파이썬 연습장 · 찾아보기(모델·API·콘솔·코드·문제 해결·용어) · 설치형 웹앱 · v1.1.2"
+        ]
+      ],
+      "story": "/content/upstage-hanip.md",
+      "private": null,
+      "allowRun": true,
+      "allowDownload": false
+    },
+    {
+      "slug": "dugeun-pick",
+      "num": "18",
+      "pin": null,
+      "added": "2026-11-02T13:00:00+09:00",
+      "name": "두근뽑기",
+      "summary": "전자칠판의 PPT 위에 늘 떠 있는 인형뽑기 기계. 뽑기를 누르면 집게가 캡슐을 집어 꺼내고, 캡슐이 열리며 학생 이름이 나와요. 모둠·여러 명 뽑기와 결석·통계까지.",
+      "tags": [
+        "교실",
+        "데스크톱"
+      ],
+      "status": "live",
+      "period": "2026.10",
+      "art": "claw",
+      "thumb": "/media/dugeun-pick/thumb.webp",
+      "screens": [],
+      "video": null,
+      "run": {
+        "type": "external",
+        "url": "https://dugeunpick.vercel.app"
+      },
+      "altRun": null,
+      "downloads": [
+        {
+          "label": "윈도우 설치판·포터블 (GitHub 릴리스)",
+          "file": "https://github.com/doguri25/dugeun-pick-releases/releases/latest",
+          "filename": "",
+          "size": ""
+        }
+      ],
+      "notice": "실행 버튼은 모양과 동작을 확인하는 웹 미리보기예요. 수업에서는 윈도우 앱을 받아 쓰세요. 유료 서명이 없어 처음 실행할 때 「PC 보호」 경고가 나오면 「추가 정보 → 실행」을 눌러 주세요.",
+      "facts": [
+        [
+          "쓰는 곳",
+          "윈도우 전자칠판 · PPT 위에 항상 맨 위 · 미니 버튼으로 접기 · 입력 돌려주기·전역 단축키"
+        ],
+        [
+          "뽑기",
+          "집게 인형뽑기 연출 · 기본·모둠·2~10명 · 중복·결석·되돌리기 · 집게 빠르기 3단계"
+        ],
+        [
+          "명단",
+          "붙여 넣기·엑셀 넣기/내보내기 · 하루·일주일·한 달 통계 · 백업 파일"
+        ],
+        [
+          "설치",
+          "윈도우 설치판·포터블 · 자동 업데이트 · 테마 4종 · v1.6.0"
+        ]
+      ],
+      "story": "/content/dugeun-pick.md",
+      "private": null,
+      "allowRun": true,
+      "allowDownload": true
+    },
+    {
+      "slug": "cursor-hanip",
+      "num": "19",
+      "pin": null,
+      "added": "2026-11-02T13:10:00+09:00",
+      "name": "커서한입",
+      "summary": "AI 코드 편집기 Cursor를 한입씩 배워 내 프로젝트에 바로 쓰는 학습앱. 기초부터 Plan·규칙·Hooks·클라우드 에이전트, 교사 업무까지 4과정 24단원, 진짜처럼 눌러 보는 모의 화면 107곳.",
+      "tags": [
+        "학습",
+        "AI"
+      ],
+      "status": "live",
+      "period": "2026.10",
+      "art": "cbite",
+      "thumb": "/media/cursor-hanip/thumb.webp",
+      "screens": [],
+      "video": null,
+      "run": {
+        "type": "external",
+        "url": "https://cursor-hanip.vercel.app"
+      },
+      "altRun": null,
+      "downloads": [],
+      "notice": "Cursor의 공식 앱이 아니에요. 제품 이름과 화면은 공부를 돕기 위해서만 썼어요.",
+      "facts": [
+        [
+          "과정",
+          "4과정 24단원 · 레슨 120 · 헷갈림 퀴즈 48 · ★ 진짜 Cursor 미션 24 · 단원 형성평가 24"
+        ],
+        [
+          "모의 화면",
+          "Agents Window·IDE 창·터미널·승인 상자 107곳 · Tab·Accept/Reject·Plan→Build · Mac ⌘/Windows Ctrl"
+        ],
+        [
+          "교사",
+          "수업 자료 · 학급용 작은 앱 · 업무 자동화 · 학생 개인정보 지키기"
+        ],
+        [
+          "도구",
+          "찾아보기 144개 · 달마다 소식 · 설치형 웹앱 · Cursor 3.22 기준 · v1.0.0"
+        ]
+      ],
+      "story": "/content/cursor-hanip.md",
+      "private": null,
+      "allowRun": true,
+      "allowDownload": false
+    },
+    {
+      "slug": "next",
+      "num": "20",
       "pin": null,
       "added": "2026-09-08T00:00:00+09:00",
       "name": "아직 쓰는 중",
