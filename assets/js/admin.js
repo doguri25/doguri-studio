@@ -101,7 +101,7 @@ async function enter(){
     await readAppsJson();
     $('#loginBox').hidden=true; $('#sessionBox').hidden=false;
     const until=new Date(SESSION.exp); const hh=String(until.getHours()).padStart(2,'0'), mm=String(until.getMinutes()).padStart(2,'0');
-    st($('#stSession'),`들어왔습니다 · ${SESSION.who==='google'?'구글 계정':'비밀번호'} · ${CFG.repo} (${CFG.branch}) · 앱 ${APPSJSON.apps.length}개 · ${hh}:${mm}까지 유효`,'ok');
+    st($('#stSession'),`들어왔습니다 · ${SESSION.who==='google'?'구글 계정':'비밀번호'} · ${CFG.store==='supabase'?'Supabase':esc(CFG.repo||'')} · 앱 ${APPSJSON.apps.length}개 · ${hh}:${mm}까지 유효`,'ok');
     PANELS.forEach(id=>$(id).hidden=false); qnavSync(); buildAppSel(); renderWorks(); buildTextSel(); loadText(); renderOrder(true);
   }catch(e){ st($('#stLogin'),'들어가지 못했습니다: '+e.message,'err'); if(!SESSION) return; }
 }

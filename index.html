@@ -6,7 +6,7 @@
 <title>도구리 작업실</title>
 <meta name="description" content="도구리가 만든 창작 도구와 게임을 밤의 서가에 봉인해 둔 작업실.">
 <meta name="author" content="도구리">
-<!-- 링크 공유 미리보기(카카오톡·페이스북 등): 이미지는 반드시 전체 주소로. 이야기별 제목·설명은 site.js가 열 때마다 바꾼다 -->
+<!-- 링크 공유 미리보기(카카오톡·페이스북 등): 이미지는 반드시 전체 주소로. /project/<slug> 용 사본은 build.mjs가 앱별 값으로 바꿔 만든다 -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="도구리 작업실">
 <meta property="og:title" content="도구리 작업실">
@@ -27,7 +27,7 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&amp;family=Noto+Sans+KR:wght@400;500;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&amp;family=Noto+Sans+KR:wght@400;500;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap"></noscript>
 <link rel="stylesheet" href="/assets/css/site.css?v=202611020527">
-<!-- 앱 목록은 site.js를 기다리지 않고 CSS·JS와 함께 미리 받는다(주소의 v=는 site.js의 v=와 같아야 재사용된다 — tools/stamp.py가 함께 맞춘다) -->
+<!-- 앱 목록은 site.js를 기다리지 않고 CSS·JS와 함께 미리 받는다(site.js가 이 <link>의 주소를 그대로 요청해 미리 받은 응답을 쓴다) -->
 <link rel="preload" href="/data/apps.json?v=202611020527" as="fetch" crossorigin>
 <link rel="preload" href="/data/overrides.json?v=202611020527" as="fetch" crossorigin>
 <script type="application/ld+json">
