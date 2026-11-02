@@ -1,7 +1,7 @@
 # 도구리 작업실 (doguri-studio)
 
 내가 만든 창작 도구와 게임을 "밤의 서가"에 봉인해 두는 개인 포트폴리오 사이트.
-프레임워크·빌드 없음. HTML 1장 + CSS 1장 + JS 1장 + 앱 목록 JSON 1개.
+프레임워크 없음. HTML 1장 + CSS 1장 + JS 1장 + 앱 목록 JSON 1개. **GitHub `main`에 푸시하면 Vercel이 `build.mjs`로 조립해 곧바로 배포한다**(Supabase에 둔 덮어쓰기·패치를 얹는다 — 아래 「배포 방식」). 로컬에서 따로 빌드할 필요는 없다.
 
 ## 폴더 구조
 
@@ -9,9 +9,12 @@
 doguri-studio/
 ├─ index.html              홈 · 이야기 상세(/project/<slug>) · 소개(/about) 를 모두 이 한 장이 처리
 ├─ 404.html                없는 주소
-├─ vercel.json             /project/:slug, /project/:slug/works, /about → index.html 로 연결(rewrite) · 캐시 헤더
+├─ vercel.json             빌드 명령·출력 폴더(public) · /project/:slug 등 → index.html · /data/overrides.json·/content/*.md → api/content · /media/* 없으면 Supabase 저장소 · 캐시 헤더
 ├─ admin.html + assets/js/admin.js   관리 화면 (/admin)
-├─ api/admin.js            관리 화면의 서버 쪽 (Vercel 함수) — 로그인 검사 · GitHub 커밋 대행
+├─ build.mjs               Vercel 빌드 — 저장소 파일 + Supabase 덮어쓰기·패치 → public/ (package.json의 build)
+├─ package.json            빌드 명령·Node 버전만 (의존성 없음)
+├─ api/admin.js            관리 화면의 서버 쪽 (Vercel 함수) — 로그인 검사 · Supabase에 저장 대행
+├─ api/content.js          작품집·소개(overrides.json)와 이야기 글(content/*.md)을 Supabase에서 실시간으로 내보냄
 ├─ robots.txt, sitemap.xml
 ├─ site.webmanifest        홈 화면에 추가할 때의 이름·아이콘·색
 ├─ tools/stamp.py           배포 전 캐시 스탬프(?v=) 갱신 · tools/make-zip.sh  배포 zip(관리 화면 소유 파일 제외)
@@ -94,9 +97,9 @@ doguri-studio/
 
 ## 관리 화면 (/admin) — 카드소설을 브라우저에서 바로 올리기
 
-`https://doguri-studio.vercel.app/admin` 을 열면 관리 화면이 나온다. **관리자만** 들어올 수 있고(구글 로그인 또는 비밀번호), 저장소 열쇠(GitHub 토큰)는 Vercel 서버에만 있어 브라우저로 내려오지 않는다. 사진을 넣고 순서를 맞춘 뒤 **게시하기**를 누르면 이미지가 자동으로 줄어(긴 변 1080px, webp) 저장소에 커밋되고, Vercel이 다시 배포해 약 1분 뒤 사이트에 나타난다. 올라간 작품의 순서 바꾸기·제목 고치기·지우기도 여기서 한다.
+`https://doguri-studio.vercel.app/admin` 을 열면 관리 화면이 나온다. **관리자만** 들어올 수 있고(구글 로그인 또는 비밀번호), 저장소 열쇠(Supabase 서비스 키)는 Vercel 서버에만 있어 브라우저로 내려오지 않는다. 사진을 넣고 순서를 맞춘 뒤 **게시하기**를 누르면 이미지가 자동으로 줄어(긴 변 1080px, webp) Supabase에 올라가고, **배포 없이 몇 초 뒤** 사이트에 나타난다. 올라간 작품의 순서 바꾸기·제목 고치기·지우기도 여기서 한다. 스크린샷·대표 이미지는 `/shots`(폰에서 사진첩으로 올리기)에서.
 
-구조: 브라우저 → `api/admin.js`(Vercel 서버리스 함수 1개) → GitHub API. 함수가 로그인을 검사하고, 허용된 경로(`media/<앱>/works/**`, `data/apps.json`, `content/<앱>.md`)에만 쓴다.
+구조: 브라우저 → `api/admin.js`(Vercel 서버리스 함수) → Supabase. 함수가 로그인을 검사하고, 허용된 경로(`media/<앱>/**` 이미지 → 스토리지 `site` 버킷, `data/overrides.json`·`content/<앱>.md` → 표 `site_content`)에만 쓴다. 사이트는 그걸 `api/content.js`와 `/media/*` 연결로 바로 읽는다. 게시 기록은 표 `publish_log`에 남는다.
 
 관리 화면에서 할 수 있는 것:
 
@@ -119,20 +122,15 @@ Vercel → 프로젝트 → 왼쪽 **Settings → Environments → Production** 
 
 | 이름 | 값 | 필수 |
 |---|---|---|
-| `GITHUB_TOKEN` | GitHub fine-grained 토큰 (아래 만드는 법) | ✅ |
+| `SUPABASE_SERVICE_KEY` | Supabase → Project Settings → API → `service_role`(secret) 키 | ✅ |
 | `ADMIN_PASSWORD` | 관리자 비밀번호. **영문·숫자·기호만**(로그인 칸이 한글을 받지 않는다), 12자 이상, 다른 데서 안 쓰는 것 | 로그인 A |
 | `GOOGLE_CLIENT_ID` | 구글 OAuth 클라이언트 ID (`…apps.googleusercontent.com`) | 로그인 B |
 | `ADMIN_EMAIL` | 허용할 구글 계정 (여러 개면 쉼표) | 로그인 B |
-| `GITHUB_REPO` | 기본 `doguri25/doguri-studio` — 다르면 적기 | 선택 |
-| `GITHUB_BRANCH` | 기본 `main` | 선택 |
+| `SESSION_SECRET` | 로그인 세션 서명 키 (없으면 서비스 키에서 만든다) | 선택 |
 
 A(비밀번호)만 넣어도 되고, B(구글)만 넣어도 되고, 둘 다 넣으면 로그인 화면에 둘 다 나온다. **비밀번호로 먼저 시작하고, 나중에 구글을 붙여도 된다.**
 
-**GitHub 토큰 만들기**
-1. GitHub → 오른쪽 위 프로필 → Settings → 맨 아래 **Developer settings** → **Personal access tokens → Fine-grained tokens → Generate new token**
-2. Token name 아무거나, Expiration은 1년 등 넉넉히, **Repository access → Only select repositories → 사이트 저장소(doguri-studio)** 선택
-3. **Permissions → Repository permissions → Contents → Read and write** (다른 건 그대로) → Generate token → 복사
-4. 복사한 값을 Vercel 환경변수 `GITHUB_TOKEN`에 붙여 넣는다. 채팅·메모·코드 어디에도 적지 않는다. 노출됐다 싶으면 GitHub에서 지우고(Delete) 새로 만들어 값을 바꾼다.
+`SUPABASE_SERVICE_KEY`는 모든 표·저장소를 쓸 수 있는 열쇠다. 채팅·메모·코드 어디에도 적지 않는다. 노출됐다 싶으면 Supabase에서 키를 새로 만들어(rotate) Vercel 값을 바꾸고 Redeploy 한다. (빌드와 `api/content.js`가 쓰는 `sb_publishable_…` 키는 공개해도 되는 읽기용이라 코드에 적혀 있다.)
 
 **구글 로그인 붙이기 (선택, 10분)**
 1. [console.cloud.google.com](https://console.cloud.google.com) → 프로젝트 하나 만들기(이름 아무거나)
@@ -140,28 +138,34 @@ A(비밀번호)만 넣어도 되고, B(구글)만 넣어도 되고, 둘 다 넣�
 3. **사용자 인증 정보 → 사용자 인증 정보 만들기 → OAuth 클라이언트 ID** → 유형 **웹 애플리케이션** → **승인된 JavaScript 원본**에 `https://doguri-studio.vercel.app` 추가 (로컬 시험도 하려면 `http://localhost:3000`도) → 만들기 → **클라이언트 ID** 복사
 4. Vercel 환경변수 `GOOGLE_CLIENT_ID`에 클라이언트 ID, `ADMIN_EMAIL`에 자기 구글 계정을 넣고 Redeploy
 
-로그인하면 12시간짜리 세션이 그 브라우저에 남는다(`localStorage`의 `dgr-admin-session`). **나가기**를 누르면 지워진다. 비밀번호를 바꾸거나 토큰을 바꾸면 기존 세션은 모두 무효가 된다.
+로그인하면 12시간짜리 세션이 그 브라우저에 남는다(`localStorage`의 `dgr-admin-session`). **나가기**를 누르면 지워진다. 비밀번호나 서비스 키(또는 `SESSION_SECRET`)를 바꾸면 기존 세션은 모두 무효가 된다.
 
-## 지금의 라이브 배포 방식 (2026-11 확인)
+## 배포 방식 — GitHub `main`에 푸시하면 끝
 
-`doguri-studio.vercel.app`은 이제 이 저장소를 그대로 배포하지 않는다. Vercel 프로젝트의 빌드 명령(`node build.mjs`, 배포 소스는 CLI로 올린 별도 묶음 — 이 저장소에는 없다)이 이렇게 조립한다.
+`main`에 푸시하면 Vercel이 저장소를 받아 `node build.mjs`(vercel.json의 `buildCommand`)를 돌리고 `public/`을 배포한다. 다른 브랜치에 푸시하면 미리보기 주소가 따로 생긴다. `build.mjs`가 하는 일:
 
-1. 이 저장소의 **고정 커밋**(`BASE_REF`)을 받아 기준으로 삼고
-2. Supabase `site_files`(덮어쓸 파일)와 `site_patches`(파일별 **찾아 바꾸기** — 앱 카드 추가, 서가 쪽수·더 보기, 전환 유령 등)를 그 위에 적용하고
-3. `data/overrides.json`·`content/*.md`는 Supabase(`site_content`)에서 실시간으로 내보내며, `/media/*`는 Supabase 저장소로 연결한다
+1. **기준 파일** — 받아 온 저장소 파일 그대로(`api/`·`tools/`·`README.md`·`build.mjs`·`package.json`·`vercel.json`은 공개 파일에서 뺀다)
+2. **Supabase 덮어쓰기** — 표 `site_files`의 파일을 그 위에 덮는다(예: `shots.html`, 새 앱 대표 이미지)
+3. **Supabase 패치** — 표 `site_patches`의 **찾아 바꾸기**를 순서대로 적용한다(새 앱 카드 추가, 서가 쪽수·더 보기, 관리 화면 문구 등). 찾을 문자열이 정확히 한 번 있어야 붙고, 못 찾으면 그 패치만 건너뛰고 빌드 로그에 `patch #N skip`이 남는다
+4. `data/overrides.json`·`content/*.md`는 공개 파일에서 빼고 `api/content.js`가 Supabase(표 `site_content`)에서 실시간으로 내보낸다. `/media/*` 중 저장소에 없는 파일은 Supabase 저장소(`site` 버킷)로 연결된다
+5. HTML 안의 `site.css`·`site.js`·`admin.js` 주소에 빌드 스탬프(`?v=`)를 새로 찍는다 — 빌드 결과 요약은 `/_build.json`
 
-그래서 **이 저장소에 푸시만 해서는 사이트가 바뀌지 않는다**(이 저장소에서 시작되는 Vercel 배포는 `build.mjs`가 없어 실패로 표시된다). 바꾸려면 기준 커밋을 새 커밋으로 올려 다시 배포해야 한다. 이때 `site_patches`의 「찾을 문자열」이 새 코드에 **글자 그대로** 남아 있어야 패치가 붙는다 — `site.js`의 `visHTML` 한 줄, `site.css`의 `.board-head .count{…}` 한 줄처럼 패치가 겨냥하는 줄은 고칠 때 조심한다.
+**코드를 고칠 때 주의**: `site_patches`가 겨냥하는 줄(예: `site.js`의 `visHTML` 한 줄, `site.css`의 `.board-head .count{…}` 한 줄, `data/apps.json`의 `"slug": "next"` 카드)을 바꾸면 그 패치가 안 붙는다. 바꾼 뒤에는 미리보기 배포의 빌드 로그에서 `patches: N/N applied`를 확인한다. 패치 내용을 코드에 아예 합쳤다면 그 패치는 Supabase에서 `enabled=false`로 끈다.
+
+(2026-11-02까지는 배포 묶음 — `build.mjs`·`package.json`·`vercel.json`·`api/` — 을 CLI로 따로 올리고, 이 저장소의 고정 커밋을 내려받아 조립했다. 그 묶음을 이 저장소로 옮겨 하나로 합쳤다. 묶음만 CLI로 올리는 방식도 여전히 동작하며, 그때는 환경변수 `BASE_REF`(기본 `main`)의 커밋을 내려받는다.)
 
 ## 두 종류의 파일 — 새 버전을 올려도 올린 작품이 사라지지 않는 이유
 
 | 누가 관리 | 파일 | 새 버전 zip에 |
 |---|---|---|
 | 코드(Claude가 zip으로 전달) | `index.html`, `assets/`, `api/`, `apps/`, `data/apps.json`(앱 기본값), `media/<앱>/`의 썸네일·스크린샷 | **들어 있음** — 덮어쓰면 됨 |
-| 내용(관리 화면 `/admin`이 커밋) | `data/overrides.json`(작품집·소개·속삭임·고정·공개 설정), `content/<앱>.md`(이야기 글), `media/<앱>/works/`(올린 카드) | **없음** — 덮어써도 그대로 남음 |
+| 내용(관리 화면 `/admin`·`/shots`가 Supabase에 저장) | `data/overrides.json`(작품집·소개·속삭임·고정·공개 설정·스크린샷), `content/<앱>.md`(이야기 글), `media/<앱>/works/`·스크린샷(올린 이미지) | **없음** — 저장소 밖(Supabase)에 있어 코드를 덮어써도 그대로 남음 |
 
-사이트는 `apps.json` 위에 `overrides.json`을 덮어서 보여 주고, 관리 화면은 `overrides.json`·`content/`·`works/`만 쓴다. 그래서 zip을 통째로 덮어써도 관리 화면에서 한 일은 보존된다. (2026-09-08 이전 zip은 `apps.json`을 직접 고쳐 썼기 때문에 새 zip이 덮어쓰면 사라졌다 — 그 문제를 이렇게 갈랐다.) zip은 `tools/make-zip.sh`로 만들며 위 제외 규칙이 들어 있다. 새 앱을 추가할 때 그 앱의 첫 이야기 글만 `content/<새앱>.md`로 따로 넣는다.
+사이트는 `apps.json` 위에 `overrides.json`을 덮어서 보여 주고, 관리 화면은 `overrides.json`·`content/`·이미지만 쓴다. 이 저장소의 `data/overrides.json`·`content/*.md`는 예전 시드일 뿐 사이트에 쓰이지 않는다(빌드가 빼고, 실제 값은 Supabase). 그래서 zip을 통째로 덮어써도 관리 화면에서 한 일은 보존된다. (2026-09-08 이전 zip은 `apps.json`을 직접 고쳐 썼기 때문에 새 zip이 덮어쓰면 사라졌다 — 그 문제를 이렇게 갈랐다.) zip은 `tools/make-zip.sh`로 만들며 위 제외 규칙이 들어 있다. 새 앱을 추가할 때 그 앱의 첫 이야기 글만 `content/<새앱>.md`로 따로 넣는다.
 
-## 배포 전 한 번: 빌드 스탬프
+## 빌드 스탬프 — 배포 때 자동
+
+배포할 때마다 `build.mjs`가 CSS·JS 주소의 `?v=`를 새로 찍으므로 따로 할 일은 없다. 로컬에서 볼 때 등 손으로 맞추고 싶으면:
 
 ```bash
 python3 tools/stamp.py
@@ -180,6 +184,7 @@ npx serve -s .
 `-s`(single-page) 옵션이 있어야 `/project/<slug>` 주소가 index.html로 연결된다. 그런 다음 `http://localhost:3000` 열기.
 간단히 볼 때는 `http://localhost:3000/?id=nooneleft` 처럼 `?id=` 로도 상세를 열 수 있다.
 관리 화면(`/admin`)은 서버 함수(`api/admin.js`)가 있어야 해서 `serve`로는 로그인이 안 된다. 굳이 로컬에서 보려면 `npx vercel dev`(환경변수는 `.env.local`에) — 보통은 배포된 주소에서 쓰면 된다.
+`serve`로 보는 화면은 저장소 파일 그대로라 Supabase의 패치(새 앱 카드 등)·작품집·스크린샷이 빠져 있다. 라이브와 같은 조립본은 `node build.mjs`로 `public/`에 만들 수 있다(Supabase에 접속할 수 있어야 한다).
 
 ## 배포 (처음 한 번)
 

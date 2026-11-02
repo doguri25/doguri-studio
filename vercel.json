@@ -1,71 +1,22 @@
 {
+  "framework": null,
+  "buildCommand": "node build.mjs",
+  "outputDirectory": "public",
   "rewrites": [
-    {
-      "source": "/project/:slug",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/project/:slug/works",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/about",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/admin",
-      "destination": "/admin.html"
-    }
+    { "source": "/project/:slug", "destination": "/index.html" },
+    { "source": "/project/:slug/works", "destination": "/index.html" },
+    { "source": "/about", "destination": "/index.html" },
+    { "source": "/admin", "destination": "/admin.html" },
+    { "source": "/shots", "destination": "/shots.html" },
+    { "source": "/data/overrides.json", "destination": "/api/content?path=data/overrides.json" },
+    { "source": "/content/:slug.md", "destination": "/api/content?path=content/:slug.md" },
+    { "source": "/media/:path*", "destination": "https://rvzczdvxfzmlqbwzqeok.supabase.co/storage/v1/object/public/site/media/:path*" }
   ],
   "headers": [
-    {
-      "source": "/media/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=86400, stale-while-revalidate=604800"
-        }
-      ]
-    },
-    {
-      "source": "/assets/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=0, must-revalidate"
-        }
-      ]
-    },
-    {
-      "source": "/data/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=0, must-revalidate"
-        }
-      ]
-    },
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-store"
-        }
-      ]
-    },
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
-        }
-      ]
-    }
+    { "source": "/media/(.*)", "headers": [ { "key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800" } ] },
+    { "source": "/assets/(.*)", "headers": [ { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" } ] },
+    { "source": "/data/apps.json", "headers": [ { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" } ] },
+    { "source": "/api/admin", "headers": [ { "key": "Cache-Control", "value": "no-store" } ] },
+    { "source": "/(.*)", "headers": [ { "key": "X-Content-Type-Options", "value": "nosniff" }, { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" } ] }
   ]
 }
