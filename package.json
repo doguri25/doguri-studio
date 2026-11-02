@@ -1,0 +1,9 @@
+{
+  "name": "doguri-studio",
+  "private": true,
+  "version": "1.0.0",
+  "description": "도구리 작업실 — GitHub 스냅샷 + Supabase 덮어쓰기를 빌드 때 합쳐 Vercel에 올리는 배포 트리",
+  "type": "commonjs",
+  "engines": { "node": "22.x" },
+  "scripts": { "build": "node build.mjs" }
+}
