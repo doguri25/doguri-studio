@@ -128,10 +128,22 @@ function updateCount(){ const vis=$$('.file',grid).filter(c=>!c.hidden||c.classL
 /* 서가 쪽수: PC 12통·폰 5통씩 보이고, 「더 보기」를 누르면 다음 묶음이 나온다 (카드가 늘어도 첫 화면이 무거워지지 않게) */
 const PAGE=()=>matchMedia('(max-width:760px)').matches?5:12; let shown=PAGE();
 function applyPage(t){
-  let n=0; $$('.file',grid).forEach(c=>{ const m=(t==='all'||c.dataset.tags.split('|').includes(t)); const on=m&&n<shown; if(m) n++; c.hidden=!on; c.classList.toggle('paged',m&&!on); });
+  /* 새로 나타나는 카드는 등장 지연을 묶음 안 순서로 다시 준다 — 전체 순번(i×90ms)을 쓰면 뒤쪽 카드가 1~2초 늦게 떠 빈칸처럼 보였다 */
+  let n=0, k=0; $$('.file',grid).forEach(c=>{ const m=(t==='all'||c.dataset.tags.split('|').includes(t)); const on=m&&n<shown; if(m) n++; if(on&&c.hidden) c.style.animationDelay=Math.min(k++,6)*70+'ms'; c.hidden=!on; c.classList.toggle('paged',m&&!on); });
   let more=$('#more'); if(!more){ more=document.createElement('div'); more.id='more'; more.className='more-wrap'; more.innerHTML='<button type="button" class="btn line">더 보기</button>'; $('#boardWrap').after(more);
-    $('button',more).addEventListener('click',()=>{ shown+=PAGE(); applyPage(tag); updateCount(); drawThread(false); }); }
+    $('button',more).addEventListener('click',()=>{ const from=shown; shown+=PAGE(); applyPage(tag); updateCount(); drawThread(false); const next=$$('.file',grid).filter(c=>!c.hidden)[from]; if(next) bringIn(next); }); }
   const left=n-Math.min(n,shown); more.hidden=left<=0; if(left>0) $('button',more).textContent=`봉인 ${left}통 더 보기`;
+}
+/* 「더 보기」로 나온 첫 카드를 머리띠 바로 아래로 올려 이어서 보게 한다.
+   전에는 화면이 버튼을 따라 내려가거나(새 카드 묶음의 끝) 제자리에 머물러(새 카드가 화면 아래에 걸침) 다시 올려야 했다.
+   카드는 등장 애니메이션(translateY)·기울기가 걸려 있어 getBoundingClientRect 대신 레이아웃 위치(offsetTop)로 잰다.
+   포커스도 그 카드로 옮겨 키보드·화면 낭독기 사용자가 같은 자리에서 이어 가게 한다(마지막 묶음이면 버튼이 사라지기도 한다). */
+function bringIn(card){
+  let y=0; for(let e=card;e;e=e.offsetParent) y+=e.offsetTop;
+  const head=$('#top'); const off=(head?head.getBoundingClientRect().bottom:0)+40;   // 40 = 카드 위로 튀어나온 탭·봉인 + 숨 쉴 틈
+  scrollTo({top:Math.max(0,y-off),behavior:reduced?'auto':'smooth'});
+  const f=$('.case-link',card)||$('a.run:not([aria-disabled="true"]),button:not([disabled])',card);
+  if(f) f.focus({preventScroll:true}); else { card.tabIndex=-1; card.focus({preventScroll:true}); }
 }
 function setFilter(t,silent){ shown=PAGE();
   if(!$$('.chip',chipsEl).some(c=>c.dataset.tag===t)) t='all';
