@@ -189,7 +189,7 @@ a.btn{text-decoration:none;cursor:pointer;-webkit-user-drag:none}
 .board-head h2{font:700 clamp(20px,2.6vw,28px)/1.2 var(--serif);color:var(--paper-strong);letter-spacing:.02em}
 .board-head h2 small{display:block;font:500 10px/1 var(--mono);color:var(--gold);letter-spacing:.38em;margin-bottom:10px}
 .board-head .count{font:400 12.5px/1.6 var(--label);color:var(--paper-3);letter-spacing:.01em;font-variant-numeric:tabular-nums}
-.more-wrap{position:relative;z-index:5;display:flex;justify-content:center;margin:30px 0 4px}
+.more-wrap{position:relative;z-index:5;display:flex;justify-content:center;margin:30px 0 4px;overflow-anchor:none}  /* 눌린(포커스된) 버튼을 스크롤 기준점으로 삼아 화면이 새 카드 끝까지 끌려 내려가지 않게 */
 .more-wrap[hidden]{display:none}
 .more-wrap .btn{padding:13px 26px;font-size:14px;letter-spacing:.02em}
 .board-head .count:empty{min-height:1.6em}  /* 집계가 채워지기 전에도 한 줄 자리 */
